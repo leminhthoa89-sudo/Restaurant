@@ -1,0 +1,226 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pixel & Pour - Barista Edition</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <!-- Game UI -->
+    <div id="game-container">
+        <!-- Top HUD -->
+        <header id="header-hud">
+            <div class="hud-item brand">
+                <i class="fa-solid fa-mug-hot"></i>
+                <h1>Pixel & Pour</h1>
+            </div>
+            
+            <div class="hud-stats">
+                <div class="hud-item time-display" id="clock-display">
+                    <span class="label">Day <span id="day-count">1</span></span>
+                    <span class="value" id="time-val">09:00 AM</span>
+                </div>
+                
+                <div class="hud-item money">
+                    <span class="label">Balance</span>
+                    <span class="value text-green">$<span id="money-amount">0</span></span>
+                </div>
+                
+                <!-- PvP Mode ONLY -->
+                <div class="hud-item money opponent-score hidden" id="opponent-hud">
+                    <span class="label">Opponent</span>
+                    <span class="value" style="color:#ef4444;">$<span id="opponent-money">0</span></span>
+                </div>
+
+                <div class="hud-item reputation">
+                    <span class="label">Reputation</span>
+                    <div class="stars" id="reputation-stars">
+                        5.0 <i class="fa-solid fa-star"></i>
+                    </div>
+                </div>
+            </div>
+            <div class="header-actions">
+                <button id="leaderboard-btn" class="glass-btn secondary">
+                    <i class="fa-solid fa-trophy"></i> Ranks
+                </button>
+                <button id="upgrades-btn" class="glass-btn primary">
+                    <i class="fa-solid fa-store"></i> Shop Upgrades
+                </button>
+            </div>
+        </header>
+
+        <!-- Right Side HUD Floating Panels -->
+        <div id="right-sidebar" class="hud-sidebar">
+            <div id="quest-board" class="glass-panel" style="padding: 15px;">
+                <h3 style="margin-bottom: 10px; font-size: 1rem; color: #1e3a8a;"><i class="fa-solid fa-clipboard-check"></i> Daily Quest</h3>
+                <p id="quest-desc" style="font-size: 0.9rem; margin-bottom: 10px;">Loading...</p>
+                <div class="progress-bar-container" style="background: rgba(0,0,0,0.1); height: 15px; border-radius: 10px; position:relative; overflow:hidden;">
+                    <div id="quest-progress-fill" style="background: #10b981; height: 100%; width: 0%; transition: width 0.3s; position:absolute;"></div>
+                    <span id="quest-progress-text" style="position:absolute; width: 100%; text-align: center; font-size: 0.7rem; font-weight: bold; line-height: 15px; color:#fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">0/0</span>
+                </div>
+            </div>
+
+            <div id="matchmaking-panel" class="glass-panel" style="padding: 15px; margin-top: 15px;">
+                <h3 style="margin-bottom: 10px; font-size: 1rem; color: #f59e0b;"><i class="fa-solid fa-globe"></i> Multiplayer</h3>
+                <div id="matchmaking-buttons">
+                    <button class="menu-btn secondary" id="btn-pvp" style="width:100%; margin-bottom: 8px; font-size: 0.9rem; padding: 8px;">🏆 PvP Race</button>
+                    <button class="menu-btn secondary" id="btn-coop" style="width:100%; font-size: 0.9rem; padding: 8px;">🤝 Co-op Cafe</button>
+                </div>
+                <div id="matchmaking-status" class="hidden" style="text-align:center;">
+                    <p id="match-status-text" style="color:#10b981; font-weight:bold; font-size: 0.85rem; margin-bottom: 8px; animation: pulse 1s infinite alternate;">Searching... (30s)</p>
+                    <p id="match-code-text" style="font-size: 0.8rem; font-weight: bold; color: #ef4444; margin-bottom: 8px;" class="hidden">Code: <span id="code-text-val">0000</span></p>
+                    <div style="display:flex; gap: 5px;">
+                        <input type="text" id="room-code-input" placeholder="Code..." style="flex:1; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.8rem; min-width:0;">
+                        <button class="menu-btn primary" id="btn-join-room" style="padding: 5px 10px; font-size: 0.8rem;">Join</button>
+                    </div>
+                    <button class="menu-btn" id="btn-cancel-match" style="background:#dc2626; color:white; width: 100%; padding: 5px; margin-top: 8px; font-size:0.8rem;">Cancel</button>
+                </div>
+            </div>
+        </div>
+
+        <main id="first-person-view">
+            <!-- Background / Customer Area (Top Half) -->
+            <section id="customer-area">
+                <div id="dining-area">
+                    <div class="bg-table" id="bt-0"></div>
+                    <div class="bg-table" id="bt-1"></div>
+                    <div class="bg-table" id="bt-2"></div>
+                    <div class="bg-table" id="bt-3"></div>
+                </div>
+                <div id="bar-slots-container">
+                    <!-- Customer slots injected by JS -->
+                </div>
+            </section>
+
+            <!-- Player Bar Counter (Bottom Half) -->
+            <section id="counter-area">
+                <!-- Holding Tray is on the counter edge facing customers -->
+                <div class="counter-edge">
+                    <div class="tray-title">Serving Tray (<span id="tray-count">0</span>/<span id="tray-max">3</span>)</div>
+                    <div id="holding-tray">
+                        <!-- Ready drinks -->
+                    </div>
+                </div>
+
+                <!-- Appliances Area (Juicer, Espresso, etc) -->
+                <div id="appliances-row">
+                    <div class="appliance locked" id="app-juice">
+                        <i class="fa-solid fa-blender"></i>
+                        <span>Juicer</span>
+                    </div>
+                    <div class="appliance locked" id="app-ice_cream">
+                        <i class="fa-solid fa-ice-cream"></i>
+                        <span>Freezer</span>
+                    </div>
+                    <div class="appliance locked" id="app-coffee">
+                        <i class="fa-solid fa-mug-hot"></i>
+                        <span>Espresso</span>
+                    </div>
+                    <div class="appliance locked" id="app-milk_tea">
+                        <i class="fa-solid fa-leaf"></i>
+                        <span>Tea Brewer</span>
+                    </div>
+                    <div class="appliance locked" id="app-yogurt">
+                        <i class="fa-solid fa-bowl-food"></i>
+                        <span>Yogurt Maker</span>
+                    </div>
+                </div>
+
+                <!-- Recipe / Menu Selector -->
+                <div id="ingredients-panel">
+                    <h3>Ingredients & Recipes</h3>
+                    <div id="menu-board">
+                        <!-- Items injected here based on unlocked categories -->
+                    </div>
+                </div>
+            </section>
+        </main>
+
+        <!-- End of Day Summary Modal -->
+        <div id="eod-modal" class="modal hidden">
+            <div class="modal-content glass-panel eod-panel">
+                <h2>End of Day <span id="eod-day-num">1</span></h2>
+                <div class="financial-summary">
+                    <div class="summary-row">
+                        <span>Revenue (Drinks Sold):</span>
+                        <span class="text-green">+$<span id="eod-revenue">0</span></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Cost of Goods (Ingredients):</span>
+                        <span class="text-red">-$<span id="eod-cogs">0</span></span>
+                    </div>
+                    <div class="summary-row">
+                        <span>Tips & Bonuses:</span>
+                        <span class="text-green">+$<span id="eod-tips">0</span></span>
+                    </div>
+                    <hr>
+                    <div class="summary-row total">
+                        <span>Net Profit:</span>
+                        <span id="eod-profit">$0</span>
+                    </div>
+                </div>
+                <button id="start-next-day-btn" class="glass-btn primary huge-btn">Start Next Day</button>
+            </div>
+        </div>
+
+        <!-- Upgrades Modal -->
+        <div id="upgrades-modal" class="modal hidden">
+            <div class="modal-content glass-panel">
+                <div class="modal-header">
+                    <h2>Shop Management</h2>
+                    <button id="close-modal-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                
+                <div class="upgrade-categories">
+                    <div class="upgrade-card" id="upg-table">
+                        <div class="upg-icon"><i class="fa-solid fa-users"></i></div>
+                        <div class="upg-info">
+                            <h3>Expand Counter Space</h3>
+                            <p>Current Slots: <span id="table-count-view">3</span>/4</p>
+                        </div>
+                        <button class="buy-btn" id="buy-table-btn">$<span id="table-cost">50</span></button>
+                    </div>
+
+                    <div class="upgrade-card" id="upg-tray">
+                        <div class="upg-icon"><i class="fa-solid fa-inbox"></i></div>
+                        <div class="upg-info">
+                            <h3>Expand Serving Tray</h3>
+                            <p>Hold more drinks at once.</p>
+                        </div>
+                        <button class="buy-btn" id="buy-tray-btn">$<span id="tray-cost">150</span></button>
+                    </div>
+                    
+                    <div class="upgrade-card" id="upg-speed">
+                        <div class="upg-icon"><i class="fa-solid fa-bolt"></i></div>
+                        <div class="upg-info">
+                            <h3>Master Barista Skills</h3>
+                            <p>Appliances finish preparations faster.</p>
+                        </div>
+                        <button class="buy-btn" id="buy-speed-btn">$<span id="speed-cost">75</span></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Leaderboard Modal -->
+        <div id="leaderboard-modal" class="modal hidden">
+            <div class="modal-content glass-panel" style="max-width: 400px;">
+                <div class="modal-header">
+                    <h2>Top Baristas</h2>
+                    <button id="close-lb-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div id="lb-list" class="lb-list-container">
+                    <!-- Leaderboards injected by JS -->
+                </div>
+            </div>
+        </div>
+        
+        <div id="notifications-container"></div>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
