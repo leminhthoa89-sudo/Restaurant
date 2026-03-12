@@ -1013,96 +1013,108 @@ let botTimeLeft = 30;
 let currentMode = 'single';
 let playerRole = 'host';
 
-const menuEls = {
-    mainMenu: document.getElementById('main-menu'),
-    gameContainer: document.getElementById('game-container'),
-    modeSelection: document.getElementById('mode-selection'),
-    lobbyPanel: document.getElementById('lobby-panel'),
-    btnSingle: document.getElementById('btn-single'),
+// Floating popup DOM refs
+const mpEls = {
+    toggleQuest: document.getElementById('toggle-quest'),
+    toggleMultiplayer: document.getElementById('toggle-multiplayer'),
+    questPopup: document.getElementById('quest-popup'),
+    mpPopup: document.getElementById('mp-popup'),
     btnPvp: document.getElementById('btn-pvp'),
     btnCoop: document.getElementById('btn-coop'),
-    btnJoin: document.getElementById('btn-join-room'),
-    btnReady: document.getElementById('btn-ready'),
-    btnBack: document.getElementById('btn-back-mode'),
+    mpButtons: document.getElementById('mp-buttons'),
+    mpStatus: document.getElementById('mp-status'),
+    matchStatusText: document.getElementById('match-status-text'),
+    matchCodeDisplay: document.getElementById('match-code-display'),
+    codeTextVal: document.getElementById('code-text-val'),
     roomCodeInput: document.getElementById('room-code-input'),
-    stateText: document.getElementById('lobby-state-text'),
-    codeDisplay: document.getElementById('room-code-display'),
-    codeText: document.getElementById('code-text'),
-    playersText: document.getElementById('lobby-players-text'),
-    readyText: document.getElementById('lobby-ready-text')
+    btnJoin: document.getElementById('btn-join-room'),
+    btnCancel: document.getElementById('btn-cancel-match'),
 };
+
+// Toggle popups
+mpEls.toggleQuest.addEventListener('click', () => {
+    let isOpen = !mpEls.questPopup.classList.contains('hidden');
+    mpEls.questPopup.classList.toggle('hidden');
+    mpEls.mpPopup.classList.add('hidden');
+    mpEls.toggleQuest.classList.toggle('active', !isOpen);
+    mpEls.toggleMultiplayer.classList.remove('active');
+});
+
+mpEls.toggleMultiplayer.addEventListener('click', () => {
+    let isOpen = !mpEls.mpPopup.classList.contains('hidden');
+    mpEls.mpPopup.classList.toggle('hidden');
+    mpEls.questPopup.classList.add('hidden');
+    mpEls.toggleMultiplayer.classList.toggle('active', !isOpen);
+    mpEls.toggleQuest.classList.remove('active');
+});
 
 function connectWS(mode) {
     if(ws) ws.close();
     
-    // Dynamically calculate the WebSocket URL based on how the page was served
     let wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
     ws = new WebSocket(`${wsProtocol}//${location.host}`);
     
     ws.onopen = () => {
-        menuEls.stateText.textContent = "Connected. Creating Room...";
-        menuEls.stateText.style.color = "#10b981";
+        mpEls.matchStatusText.textContent = "Connected. Creating Room...";
         ws.send(JSON.stringify({ action: 'CREATE_ROOM', mode: mode }));
     };
     
     ws.onmessage = (e) => {
         let msg = JSON.parse(e.data);
         if (msg.type === 'ROOM_CREATED') {
-            menuEls.stateText.textContent = "Waiting for players... (Bot in 30s)";
-            menuEls.codeDisplay.classList.remove('hidden');
-            menuEls.codeText.textContent = msg.code;
-            menuEls.playersText.textContent = "1/2";
-            menuEls.btnReady.disabled = false;
+            mpEls.matchCodeDisplay.classList.remove('hidden');
+            mpEls.codeTextVal.textContent = msg.code;
             
             // Bot Matchmaker Timer
             botTimeLeft = 30;
+            mpEls.matchStatusText.textContent = `Searching... (${botTimeLeft}s)`;
+            
             botCountdown = setInterval(() => {
                 botTimeLeft--;
                 if (botTimeLeft > 0) {
-                    menuEls.stateText.textContent = `Waiting for players... (Bot in ${botTimeLeft}s)`;
+                    mpEls.matchStatusText.textContent = `Searching... (${botTimeLeft}s)`;
                 }
             }, 1000);
             
             botTimeout = setTimeout(() => {
                 clearInterval(botCountdown);
-                menuEls.stateText.textContent = "Starting with Bot...";
+                mpEls.matchStatusText.textContent = "Starting with Bot...";
                 currentMode = currentMode === 'pvp' ? 'pvp_bot' : 'coop_bot';
-                if(ws) ws.close(); // disconnect from server
-                startGame();
+                if(ws) ws.close();
+                softRebootForMultiplayer();
             }, 30000);
             
         } else if (msg.type === 'ROOM_JOINED') {
-            menuEls.stateText.textContent = "Joined Room!";
-            menuEls.codeDisplay.classList.remove('hidden');
-            menuEls.codeText.textContent = msg.code;
-            menuEls.playersText.textContent = "2/2";
-            menuEls.btnReady.disabled = false;
+            mpEls.matchStatusText.textContent = "Joined Room!";
+            mpEls.matchCodeDisplay.classList.remove('hidden');
+            mpEls.codeTextVal.textContent = msg.code;
+            if(msg.mode) currentMode = msg.mode;
         } else if (msg.type === 'PLAYER_JOINED') {
-            menuEls.playersText.textContent = `${msg.count}/2`;
             if (botTimeout) {
                 clearTimeout(botTimeout);
                 clearInterval(botCountdown);
-                menuEls.stateText.textContent = "Player joined! Ready up.";
+            }
+            mpEls.matchStatusText.textContent = "Player joined! Starting...";
+            // Auto-ready when player joins
+            if(ws && ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ action: 'TOGGLE_READY' }));
             }
         } else if (msg.type === 'READY_STATUS') {
-            menuEls.readyText.textContent = `(${msg.readyCount} Ready)`;
+            // ignore, auto-handling
         } else if (msg.type === 'GAME_START') {
             if(msg.role) playerRole = msg.role;
-            startGame();
+            softRebootForMultiplayer();
         } else if (msg.type === 'OPPONENT_SCORE') {
             els.opponentMoney.textContent = msg.score;
         } else if (msg.type === 'SYNC_EVENT' && playerRole === 'joiner') {
-            // Joiner receives authoritative state from Host
             gameState = msg.eventData.gameState;
             slotStates = msg.eventData.slotStates;
             tableStates = msg.eventData.tableStates;
             
-            // Re-render everything with the new state
             if(els.moneyAmount) els.moneyAmount.textContent = gameState.money;
             if(els.slotCountView) els.slotCountView.textContent = gameState.slots;
             if(els.dayCount) els.dayCount.textContent = gameState.day;
             if(els.timeVal) els.timeVal.textContent = formatTime(gameState.timeMinutes);
-            
             els.trayCount.textContent = gameState.tray.length;
             els.trayMax.textContent = gameState.maxTray;
             
@@ -1114,12 +1126,10 @@ function connectWS(mode) {
                 if (q.completed) els.questBarFill.style.background = '#3b82f6';
                 else els.questBarFill.style.background = '#10b981';
             }
-            
             renderSlots();
             renderTray();
             updateDiningTables();
         } else if (msg.type === 'ACTION_CLEAN' && playerRole === 'host') {
-            // Host processes the joiner's clean action
             if (msg.target === 'slot') {
                 slotStates[msg.id].status = 'empty';
                 updateSlotUI(msg.id);
@@ -1127,131 +1137,131 @@ function connectWS(mode) {
                 tableStates[msg.id].status = 'empty';
                 updateDiningTables();
             }
-            syncCoopState(); // broadcast the cleaned state back
+            syncCoopState();
         } else if (msg.type === 'ERROR') {
             alert(msg.msg);
         }
     };
     
     ws.onerror = () => {
-        menuEls.stateText.textContent = "Connection Failed.";
-        menuEls.stateText.style.color = "#ef4444";
+        mpEls.matchStatusText.textContent = "Connection Failed.";
+        mpEls.matchStatusText.style.color = "#ef4444";
     };
 }
 
-menuEls.btnSingle.addEventListener('click', () => {
-    currentMode = 'single';
-    startGame();
-});
+// Soft reboot: reset game state for multiplayer without reloading
+function softRebootForMultiplayer() {
+    // Close popups
+    mpEls.mpPopup.classList.add('hidden');
+    mpEls.toggleMultiplayer.classList.remove('active');
+    
+    // Toggle PvP HUD
+    if(currentMode === 'pvp' || currentMode === 'pvp_bot') {
+        els.opponentHud.classList.remove('hidden');
+    }
+    
+    // Reset game state for fresh multiplayer round
+    gameState.money = 10;
+    gameState.day = 1;
+    gameState.timeMinutes = 540;
+    gameState.isDayActive = true;
+    gameState.dayStats = { revenue: 0, cogs: 0, tips: 0 };
+    gameState.tray = [];
+    opponentBotScore = 0;
+    
+    // Reset slots
+    for(let i = 0; i < 4; i++) { slotStates[i] = { status: 'empty' }; }
+    for(let i = 0; i < 4; i++) { tableStates[i] = { status: 'empty' }; }
+    
+    generateDailyQuest();
+    updateHUD();
+    renderSlots();
+    renderTray();
+    updateDiningTables();
+    
+    // Start bots if needed
+    if (currentMode === 'pvp_bot') {
+        setInterval(simulateOpponentScore, 5000);
+    } else if (currentMode === 'coop_bot') {
+        setInterval(simulateBusserActions, 2000);
+    }
+    
+    showFloatingText("🎮 Multiplayer Started!", els.timeVal);
+}
 
-menuEls.btnPvp.addEventListener('click', () => {
+// PvP button
+mpEls.btnPvp.addEventListener('click', () => {
     currentMode = 'pvp';
-    menuEls.modeSelection.classList.add('hidden');
-    menuEls.lobbyPanel.classList.remove('hidden');
+    mpEls.mpButtons.classList.add('hidden');
+    mpEls.mpStatus.classList.remove('hidden');
     connectWS('pvp');
 });
 
-menuEls.btnCoop.addEventListener('click', () => {
+// Co-op button
+mpEls.btnCoop.addEventListener('click', () => {
     currentMode = 'coop';
-    menuEls.modeSelection.classList.add('hidden');
-    menuEls.lobbyPanel.classList.remove('hidden');
+    mpEls.mpButtons.classList.add('hidden');
+    mpEls.mpStatus.classList.remove('hidden');
     connectWS('coop');
 });
 
-menuEls.btnJoin.addEventListener('click', () => {
-    let code = menuEls.roomCodeInput.value.trim();
+// Join room
+mpEls.btnJoin.addEventListener('click', () => {
+    let code = mpEls.roomCodeInput.value.trim();
     if(code && ws && ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ action: 'JOIN_ROOM', code: code }));
     } else if (code) {
-        // Not connected yet, connect then join
         let wsProtocol = location.protocol === 'https:' ? 'wss:' : 'ws:';
         ws = new WebSocket(`${wsProtocol}//${location.host}`);
         ws.onopen = () => {
             ws.send(JSON.stringify({ action: 'JOIN_ROOM', code: code }));
         };
-        handleWSMessages();
+        // Reuse same onmessage handler
+        ws.onmessage = (e) => {
+            let msg = JSON.parse(e.data);
+            if (msg.type === 'ROOM_JOINED') {
+                if(msg.mode) currentMode = msg.mode;
+                mpEls.matchStatusText.textContent = "Joined! Waiting for start...";
+                // Auto-ready
+                if(ws && ws.readyState === WebSocket.OPEN) {
+                    ws.send(JSON.stringify({ action: 'TOGGLE_READY' }));
+                }
+            } else if (msg.type === 'GAME_START') {
+                if(msg.role) playerRole = msg.role;
+                softRebootForMultiplayer();
+            } else if (msg.type === 'OPPONENT_SCORE') {
+                els.opponentMoney.textContent = msg.score;
+            } else if (msg.type === 'SYNC_EVENT' && playerRole === 'joiner') {
+                gameState = msg.eventData.gameState;
+                slotStates = msg.eventData.slotStates;
+                tableStates = msg.eventData.tableStates;
+                if(els.moneyAmount) els.moneyAmount.textContent = gameState.money;
+                if(els.dayCount) els.dayCount.textContent = gameState.day;
+                if(els.timeVal) els.timeVal.textContent = formatTime(gameState.timeMinutes);
+                renderSlots(); renderTray(); updateDiningTables();
+            } else if (msg.type === 'ACTION_CLEAN' && playerRole === 'host') {
+                if (msg.target === 'slot') { slotStates[msg.id].status = 'empty'; updateSlotUI(msg.id); }
+                else if (msg.target === 'table') { tableStates[msg.id].status = 'empty'; updateDiningTables(); }
+                syncCoopState();
+            } else if (msg.type === 'ERROR') {
+                alert(msg.msg);
+            }
+        };
     }
 });
 
-function handleWSMessages() {
-    ws.onmessage = (e) => {
-        let msg = JSON.parse(e.data);
-        if (msg.type === 'ROOM_JOINED') {
-            menuEls.stateText.textContent = "Joined Room!";
-            menuEls.codeDisplay.classList.remove('hidden');
-            menuEls.codeText.textContent = msg.code;
-            menuEls.playersText.textContent = "2/2";
-            currentMode = msg.mode;
-            menuEls.btnReady.disabled = false;
-        } else if (msg.type === 'READY_STATUS') {
-            menuEls.readyText.textContent = `(${msg.readyCount} Ready)`;
-        } else if (msg.type === 'GAME_START') {
-            if(msg.role) playerRole = msg.role;
-            startGame();
-        } else if (msg.type === 'OPPONENT_SCORE') {
-            els.opponentMoney.textContent = msg.score;
-        } else if (msg.type === 'SYNC_EVENT' && playerRole === 'joiner') {
-            // Joiner receives authoritative state from Host
-            gameState = msg.eventData.gameState;
-            slotStates = msg.eventData.slotStates;
-            tableStates = msg.eventData.tableStates;
-            
-            if(els.moneyAmount) els.moneyAmount.textContent = gameState.money;
-            if(els.slotCountView) els.slotCountView.textContent = gameState.slots;
-            if(els.dayCount) els.dayCount.textContent = gameState.day;
-            if(els.timeVal) els.timeVal.textContent = formatTime(gameState.timeMinutes);
-            els.trayCount.textContent = gameState.tray.length;
-            els.trayMax.textContent = gameState.maxTray;
-            
-            if (gameState.activeQuest) {
-                let q = gameState.activeQuest;
-                els.questDesc.textContent = q.desc;
-                els.questText.textContent = `${q.current}/${q.target}`;
-                els.questBarFill.style.width = `${Math.min(100, (q.current / q.target) * 100)}%`;
-                if (q.completed) els.questBarFill.style.background = '#3b82f6';
-                else els.questBarFill.style.background = '#10b981';
-            }
-            renderSlots();
-            renderTray();
-            updateDiningTables();
-        } else if (msg.type === 'ACTION_CLEAN' && playerRole === 'host') {
-            // Host processes the joiner's clean action
-            if (msg.target === 'slot') {
-                slotStates[msg.id].status = 'empty';
-                updateSlotUI(msg.id);
-            } else if (msg.target === 'table') {
-                tableStates[msg.id].status = 'empty';
-                updateDiningTables();
-            }
-            syncCoopState(); // broadcast the cleaned state back
-        } else if (msg.type === 'ERROR') {
-            alert(msg.msg);
-        }
-    };
-}
-
-menuEls.btnReady.addEventListener('click', () => {
-    if(ws && ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ action: 'TOGGLE_READY' }));
-        menuEls.btnReady.textContent = "Waiting for others...";
-        menuEls.btnReady.disabled = true;
-    }
-});
-
-menuEls.btnBack.addEventListener('click', () => {
+// Cancel matchmaking
+mpEls.btnCancel.addEventListener('click', () => {
     if(ws) ws.close();
-    if(botTimeout) {
-        clearTimeout(botTimeout);
-        clearInterval(botCountdown);
-    }
-    menuEls.modeSelection.classList.remove('hidden');
-    menuEls.lobbyPanel.classList.add('hidden');
-    menuEls.btnReady.textContent = "Ready Up (Start)";
-    menuEls.btnReady.disabled = true;
+    if(botTimeout) { clearTimeout(botTimeout); clearInterval(botCountdown); }
+    currentMode = 'single';
+    mpEls.mpStatus.classList.add('hidden');
+    mpEls.mpButtons.classList.remove('hidden');
+    mpEls.matchCodeDisplay.classList.add('hidden');
+    mpEls.matchStatusText.textContent = "Searching... (30s)";
+    mpEls.matchStatusText.style.color = "#10b981";
 });
 
-function startGame() {
-    menuEls.mainMenu.classList.add('hidden');
-    menuEls.gameContainer.classList.remove('hidden');
-    initGame();
-}
+// Auto-start single-player on page load!
+initGame();
+

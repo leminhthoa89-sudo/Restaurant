@@ -52,32 +52,41 @@
             </div>
         </header>
 
-        <!-- Right Side HUD Floating Panels -->
-        <div id="right-sidebar" class="hud-sidebar">
-            <div id="quest-board" class="glass-panel" style="padding: 15px;">
-                <h3 style="margin-bottom: 10px; font-size: 1rem; color: #1e3a8a;"><i class="fa-solid fa-clipboard-check"></i> Daily Quest</h3>
-                <p id="quest-desc" style="font-size: 0.9rem; margin-bottom: 10px;">Loading...</p>
-                <div class="progress-bar-container" style="background: rgba(0,0,0,0.1); height: 15px; border-radius: 10px; position:relative; overflow:hidden;">
-                    <div id="quest-progress-fill" style="background: #10b981; height: 100%; width: 0%; transition: width 0.3s; position:absolute;"></div>
-                    <span id="quest-progress-text" style="position:absolute; width: 100%; text-align: center; font-size: 0.7rem; font-weight: bold; line-height: 15px; color:#fff; text-shadow: 1px 1px 2px rgba(0,0,0,0.5);">0/0</span>
-                </div>
-            </div>
+        <!-- Floating Icon Buttons (Top-Left) -->
+        <div id="floating-icons">
+            <button class="float-icon-btn" id="toggle-quest" title="Daily Quest">
+                <i class="fa-solid fa-clipboard-check"></i>
+            </button>
+            <button class="float-icon-btn" id="toggle-multiplayer" title="Multiplayer">
+                <i class="fa-solid fa-globe"></i>
+            </button>
+        </div>
 
-            <div id="matchmaking-panel" class="glass-panel" style="padding: 15px; margin-top: 15px;">
-                <h3 style="margin-bottom: 10px; font-size: 1rem; color: #f59e0b;"><i class="fa-solid fa-globe"></i> Multiplayer</h3>
-                <div id="matchmaking-buttons">
-                    <button class="menu-btn secondary" id="btn-pvp" style="width:100%; margin-bottom: 8px; font-size: 0.9rem; padding: 8px;">🏆 PvP Race</button>
-                    <button class="menu-btn secondary" id="btn-coop" style="width:100%; font-size: 0.9rem; padding: 8px;">🤝 Co-op Cafe</button>
+        <!-- Quest Popup -->
+        <div id="quest-popup" class="float-popup glass-panel hidden">
+            <h3><i class="fa-solid fa-clipboard-check"></i> Daily Quest</h3>
+            <p id="quest-desc">Loading...</p>
+            <div class="quest-progress-bar">
+                <div id="quest-progress-fill"></div>
+                <span id="quest-progress-text">0/0</span>
+            </div>
+        </div>
+
+        <!-- Multiplayer Popup -->
+        <div id="mp-popup" class="float-popup glass-panel hidden">
+            <h3><i class="fa-solid fa-globe"></i> Multiplayer</h3>
+            <div id="mp-buttons">
+                <button class="mp-btn" id="btn-pvp">🏆 PvP Race</button>
+                <button class="mp-btn" id="btn-coop">🤝 Co-op Cafe</button>
+            </div>
+            <div id="mp-status" class="hidden">
+                <p id="match-status-text">Searching... (30s)</p>
+                <div class="mp-join-row">
+                    <input type="text" id="room-code-input" placeholder="Room Code...">
+                    <button class="mp-btn small" id="btn-join-room">Join</button>
                 </div>
-                <div id="matchmaking-status" class="hidden" style="text-align:center;">
-                    <p id="match-status-text" style="color:#10b981; font-weight:bold; font-size: 0.85rem; margin-bottom: 8px; animation: pulse 1s infinite alternate;">Searching... (30s)</p>
-                    <p id="match-code-text" style="font-size: 0.8rem; font-weight: bold; color: #ef4444; margin-bottom: 8px;" class="hidden">Code: <span id="code-text-val">0000</span></p>
-                    <div style="display:flex; gap: 5px;">
-                        <input type="text" id="room-code-input" placeholder="Code..." style="flex:1; padding: 5px; border-radius: 4px; border: 1px solid #ccc; font-size: 0.8rem; min-width:0;">
-                        <button class="menu-btn primary" id="btn-join-room" style="padding: 5px 10px; font-size: 0.8rem;">Join</button>
-                    </div>
-                    <button class="menu-btn" id="btn-cancel-match" style="background:#dc2626; color:white; width: 100%; padding: 5px; margin-top: 8px; font-size:0.8rem;">Cancel</button>
-                </div>
+                <p id="match-code-display" class="hidden">Code: <span id="code-text-val">----</span></p>
+                <button class="mp-btn cancel" id="btn-cancel-match">Cancel</button>
             </div>
         </div>
 
