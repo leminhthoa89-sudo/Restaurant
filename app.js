@@ -39,25 +39,25 @@ const MENU_CATEGORIES = {
 // Added 'cost' to track Cost of Goods Sold (COGS)
 const MENU = {
     // Juices (Category uses Blender)
-    juice_orange: { cat: 'juice', name: 'Orange', price: 5, cost: 2, time: 2000, color: '#fed7aa', icon: '🥤', rawIcon: '🍊' },
-    juice_apple: { cat: 'juice', name: 'Apple', price: 5, cost: 2, time: 2000, color: '#bbf7d0', icon: '🥤', rawIcon: '🍏' },
-    juice_watermelon: { cat: 'juice', name: 'Melon', price: 6, cost: 3, time: 2500, color: '#fecdd3', icon: '🥤', rawIcon: '🍉' },
+    juice_orange: { cat: 'juice', name: 'Orange', price: 5, cost: 2, time: 1000, color: '#fed7aa', icon: '🥤', rawIcon: '🍊' },
+    juice_apple: { cat: 'juice', name: 'Apple', price: 5, cost: 2, time: 1000, color: '#bbf7d0', icon: '🥤', rawIcon: '🍏' },
+    juice_watermelon: { cat: 'juice', name: 'Melon', price: 6, cost: 3, time: 1200, color: '#fecdd3', icon: '🥤', rawIcon: '🍉' },
     // Ice Creams (Category uses Freezer)
-    ice_vanilla: { cat: 'ice_cream', name: 'Vanilla', price: 8, cost: 4, time: 3000, color: '#fef3c7', icon: '🍦', rawIcon: '🥛' },
-    ice_choco: { cat: 'ice_cream', name: 'Choco', price: 9, cost: 4, time: 3000, color: '#9a3412', icon: '🍦', rawIcon: '🍫' },
-    ice_berry: { cat: 'ice_cream', name: 'Berry', price: 9, cost: 4, time: 3500, color: '#fbcfe8', icon: '🍦', rawIcon: '🍓' },
+    ice_vanilla: { cat: 'ice_cream', name: 'Vanilla', price: 8, cost: 4, time: 1500, color: '#fef3c7', icon: '🍦', rawIcon: '🥛' },
+    ice_choco: { cat: 'ice_cream', name: 'Choco', price: 9, cost: 4, time: 1500, color: '#9a3412', icon: '🍦', rawIcon: '🍫' },
+    ice_berry: { cat: 'ice_cream', name: 'Berry', price: 9, cost: 4, time: 1800, color: '#fbcfe8', icon: '🍦', rawIcon: '🍓' },
     // Coffees (Category uses Espresso)
-    coffee_black: { cat: 'coffee', name: 'Black', price: 15, cost: 5, time: 4000, color: '#1c1917', icon: '☕' },
-    coffee_milk: { cat: 'coffee', name: 'Latte', price: 18, cost: 6, time: 4500, color: '#d6d3d1', icon: '🥛' },
-    coffee_cap: { cat: 'coffee', name: 'Cappu', price: 20, cost: 8, time: 5000, color: '#a8a29e', icon: '🤎' },
+    coffee_black: { cat: 'coffee', name: 'Black', price: 15, cost: 5, time: 2000, color: '#1c1917', icon: '☕' },
+    coffee_milk: { cat: 'coffee', name: 'Latte', price: 18, cost: 6, time: 2200, color: '#d6d3d1', icon: '🥛' },
+    coffee_cap: { cat: 'coffee', name: 'Cappu', price: 20, cost: 8, time: 2500, color: '#a8a29e', icon: '🤎' },
     // Milk Teas (Category uses Tea Brewer)
-    tea_classic: { cat: 'milk_tea', name: 'Classic', price: 25, cost: 10, time: 5000, color: '#fed7aa', icon: '🧋' },
-    tea_taro: { cat: 'milk_tea', name: 'Taro', price: 28, cost: 12, time: 5500, color: '#e9d5ff', icon: '💜' },
-    tea_matcha: { cat: 'milk_tea', name: 'Matcha', price: 28, cost: 12, time: 5500, color: '#bbf7d0', icon: '🍵' },
+    tea_classic: { cat: 'milk_tea', name: 'Classic', price: 25, cost: 10, time: 2500, color: '#fed7aa', icon: '🧋' },
+    tea_taro: { cat: 'milk_tea', name: 'Taro', price: 28, cost: 12, time: 2800, color: '#e9d5ff', icon: '💜' },
+    tea_matcha: { cat: 'milk_tea', name: 'Matcha', price: 28, cost: 12, time: 2800, color: '#bbf7d0', icon: '🍵' },
     // Yogurts (Category uses Yogurt Maker)
-    yogurt_plain: { cat: 'yogurt', name: 'Plain', price: 30, cost: 15, time: 6000, color: '#f8fafc', icon: '🥣' },
-    yogurt_berry: { cat: 'yogurt', name: 'Berry', price: 35, cost: 18, time: 6500, color: '#fbcfe8', icon: '🫐' },
-    yogurt_mango: { cat: 'yogurt', name: 'Mango', price: 35, cost: 18, time: 6500, color: '#fef08a', icon: '🥭' }
+    yogurt_plain: { cat: 'yogurt', name: 'Plain', price: 30, cost: 15, time: 3000, color: '#f8fafc', icon: '🥣' },
+    yogurt_berry: { cat: 'yogurt', name: 'Berry', price: 35, cost: 18, time: 3200, color: '#fbcfe8', icon: '🫐' },
+    yogurt_mango: { cat: 'yogurt', name: 'Mango', price: 35, cost: 18, time: 3200, color: '#fef08a', icon: '🥭' }
 };
 
 // Upgrade Costs
@@ -664,51 +664,54 @@ function prepareDrink(itemKey, btnElement) {
 
 function serveFromTray(trayIndex) {
     let itemKey = gameState.tray[trayIndex];
-    let served = false;
     
-    // Scan left to right for waiting customer needing this
+    // Find customers hungry for this
+    let matchingSlots = [];
     for (let i = 0; i < gameState.slots; i++) {
         let state = slotStates[i];
-        if (state.status === 'waiting') {
-            let orderIdx = state.orders.indexOf(itemKey);
-            if (orderIdx > -1) {
-                state.orders.splice(orderIdx, 1);
-                state.moneyOwed = (state.moneyOwed || 0) + MENU[itemKey].price;
-                
-                // Quest Progress: Items
-                progressQuest('items', 1);
-                
-                // Add tip logic if served fast (patience > 50%)
-                let pct = (state.patience / state.maxPatience);
-                if (pct > 0.5) {
-                    state.tipsGiven = (state.tipsGiven || 0) + 1; // +$1 tip per quick item
-                    // Quest progress: Perfect Tips
-                    if (MENU[itemKey].cat === 'coffee' || MENU[itemKey].cat === 'milk_tea') progressQuest('tips', 1); 
-                }
-                
-                // Add patience back 
-                state.patience = Math.min(state.maxPatience, state.patience + 25); 
-                
-                if (state.orders.length === 0) {
-                    handleCustomerLeave(i, false);
-                } else {
-                    updateSlotUI(i);
-                }
-                
-                served = true;
-                break;
-            }
+        if (state.status === 'waiting' && state.orders.indexOf(itemKey) > -1) {
+            matchingSlots.push({ idx: i, spawnTime: state.spawnTime });
         }
     }
     
-    if (served) {
-        gameState.tray.splice(trayIndex, 1);
-        renderTray();
-    } else {
+    if (matchingSlots.length === 0) {
         let slot = els.holdingTray.children[trayIndex];
         slot.style.animation = 'shake 0.2s';
         setTimeout(() => slot.style.animation = '', 200);
+        return;
     }
+    
+    // Serve the one who arrived first (FIFO)
+    matchingSlots.sort((a, b) => a.spawnTime - b.spawnTime);
+    let targetSlotIdx = matchingSlots[0].idx;
+    let state = slotStates[targetSlotIdx];
+    
+    // Serve it
+    let orderIdx = state.orders.indexOf(itemKey);
+    state.orders.splice(orderIdx, 1);
+    state.moneyOwed = (state.moneyOwed || 0) + MENU[itemKey].price;
+    
+    // Quest Progress: Items
+    progressQuest('items', 1);
+    
+    // Add tip logic if served fast (patience > 50%)
+    let pct = (state.patience / state.maxPatience);
+    if (pct > 0.5) {
+        state.tipsGiven = (state.tipsGiven || 0) + 1; 
+        if (MENU[itemKey].cat === 'coffee' || MENU[itemKey].cat === 'milk_tea') progressQuest('tips', 1); 
+    }
+    
+    // Add patience back 
+    state.patience = Math.min(state.maxPatience, state.patience + 25); 
+    
+    if (state.orders.length === 0) {
+        handleCustomerLeave(targetSlotIdx, false);
+    } else {
+        updateSlotUI(targetSlotIdx);
+    }
+    
+    gameState.tray.splice(trayIndex, 1);
+    renderTray();
 }
 
 // -- End of Day Logic --
