@@ -71,18 +71,14 @@
 
         <!-- Ranking Popup -->
         <div id="rank-popup" class="float-popup glass-panel hidden">
-            <h3>🏅 Your Rank</h3>
-            <div id="rank-tier-display">
-                <div id="rank-badge">🌱</div>
-                <div id="rank-title">Beginner</div>
+            <h3>🏅 Leaderboard</h3>
+            <div id="rank-my-tier" style="text-align:center; margin-bottom:8px;">
+                <span id="rank-badge" style="font-size:1.5rem;">🌱</span>
+                <span id="rank-title" style="font-weight:800; color:#f59e0b;">Beginner</span>
+                <span id="rank-earnings" style="font-size:0.75rem; color:#6b7280;">($0)</span>
             </div>
-            <p id="rank-earnings">Total: $0</p>
-            <div id="rank-tiers-list">
-                <div class="rank-tier-row active"><span>🌱</span> Beginner <small>&lt;$500</small></div>
-                <div class="rank-tier-row"><span>⭐</span> Apprentice <small>$500</small></div>
-                <div class="rank-tier-row"><span>💎</span> Expert <small>$1,000</small></div>
-                <div class="rank-tier-row"><span>👑</span> Master <small>$2,500</small></div>
-                <div class="rank-tier-row"><span>🔥</span> Legend <small>$5,000</small></div>
+            <div id="rank-leaderboard" style="max-height:200px; overflow-y:auto;">
+                <p style="text-align:center; color:#9ca3af; font-size:0.8rem;">Loading...</p>
             </div>
         </div>
 

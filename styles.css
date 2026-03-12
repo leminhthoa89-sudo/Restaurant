@@ -60,6 +60,7 @@ body {
 }
 .text-green { color: var(--money-color); font-weight: 800; }
 .text-red { color: #ef4444; font-weight: 800; }
+.hidden { display: none !important; }
 
 /* Header/HUD */
 #header-hud {

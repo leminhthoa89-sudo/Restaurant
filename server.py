@@ -6,12 +6,25 @@ import websockets
 import json
 import uuid
 import random
+import os
 
 # --- Combined HTTP & WebSocket Server ---
 PORT = 8003
+LB_FILE = 'leaderboard.json'
 
 rooms = {} # roomCode: {mode: 'coop|pvp', players: [websocket], gameState: {...}}
 player_rooms = {} # websocket: roomCode
+
+# Leaderboard helpers
+def load_leaderboard():
+    if os.path.exists(LB_FILE):
+        with open(LB_FILE, 'r') as f:
+            return json.load(f)
+    return []
+
+def save_leaderboard(data):
+    with open(LB_FILE, 'w') as f:
+        json.dump(data, f)
 
 def generate_room_code():
     return str(random.randint(1000, 9999))
@@ -127,16 +140,65 @@ async def handle_client(websocket, path):
         print("WS client disconnected")
 
 async def process_request(path, request_headers):
-    # If this is a websocket upgrade request, return None to proceed with ws handshake
+    # WebSocket upgrade
     if "websocket" in request_headers.get("Upgrade", "").lower():
         return None
+    
+    raw_path = urllib.parse.unquote(path.split("?")[0])
+    
+    # --- API: GET leaderboard ---
+    if raw_path == "/api/leaderboard":
+        lb = load_leaderboard()
+        body = json.dumps(lb).encode()
+        headers = [
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(body))),
+            ("Access-Control-Allow-Origin", "*"),
+        ]
+        return (http.HTTPStatus.OK, headers, body)
+    
+    # --- API: POST submit score ---
+    if raw_path == "/api/submit_score":
+        # Read the body from the request
+        content_length = int(request_headers.get("Content-Length", 0))
+        # For POST with websockets process_request, we can't easily read body
+        # So we use query params instead: /api/submit_score?name=X&score=Y
+        query = urllib.parse.urlparse(path).query
+        params = urllib.parse.parse_qs(query)
+        name = params.get('name', ['Unknown'])[0]
+        score = int(params.get('score', [0])[0])
         
-    # Otherwise, act as a static HTTP server
-    path = urllib.parse.unquote(path.split("?")[0])
-    if path == "/":
-        path = "/index.html"
+        lb = load_leaderboard()
+        # Update existing or add new
+        found = False
+        for entry in lb:
+            if entry['name'] == name:
+                if score > entry['score']:
+                    entry['score'] = score
+                found = True
+                break
+        if not found:
+            lb.append({'name': name, 'score': score})
         
-    filepath = "." + path
+        # Sort descending
+        lb.sort(key=lambda x: x['score'], reverse=True)
+        # Keep top 50
+        lb = lb[:50]
+        save_leaderboard(lb)
+        
+        body = json.dumps({'ok': True}).encode()
+        headers = [
+            ("Content-Type", "application/json"),
+            ("Content-Length", str(len(body))),
+            ("Access-Control-Allow-Origin", "*"),
+        ]
+        return (http.HTTPStatus.OK, headers, body)
+
+    # Otherwise, static HTTP server
+    if raw_path == "/":
+        raw_path = "/index.html"
+        
+    filepath = "." + raw_path
     try:
         with open(filepath, "rb") as f:
             body = f.read()

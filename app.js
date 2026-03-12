@@ -740,6 +740,7 @@ function endDay() {
     
     // Save to Leaderboard
     saveLeaderboard(revenue);
+    submitScore(); // Push to server global leaderboard
     
     els.eodModal.classList.remove('hidden');
 }
@@ -1029,7 +1030,7 @@ const mpEls = {
     rankBadge: document.getElementById('rank-badge'),
     rankTitle: document.getElementById('rank-title'),
     rankEarnings: document.getElementById('rank-earnings'),
-    rankTiersList: document.getElementById('rank-tiers-list'),
+    rankLeaderboard: document.getElementById('rank-leaderboard'),
     btnPvp: document.getElementById('btn-pvp'),
     btnCoop: document.getElementById('btn-coop'),
     mpButtons: document.getElementById('mp-buttons'),
@@ -1051,6 +1052,14 @@ const RANK_TIERS = [
     { name: 'Legend', icon: '🔥', min: 5000 },
 ];
 
+function getTier(score) {
+    let tier = RANK_TIERS[0];
+    for (let t of RANK_TIERS) {
+        if (score >= t.min) tier = t;
+    }
+    return tier;
+}
+
 function closeAllPopups() {
     mpEls.questPopup.classList.add('hidden');
     mpEls.rankPopup.classList.add('hidden');
@@ -1061,20 +1070,43 @@ function closeAllPopups() {
 }
 
 function updateRankDisplay() {
+    // Update my own tier
     let total = gameState.totalEarnings;
-    let currentTier = RANK_TIERS[0];
-    for (let t of RANK_TIERS) {
-        if (total >= t.min) currentTier = t;
-    }
-    mpEls.rankBadge.textContent = currentTier.icon;
-    mpEls.rankTitle.textContent = currentTier.name;
-    mpEls.rankEarnings.textContent = `Total: $${total}`;
+    let myTier = getTier(total);
+    mpEls.rankBadge.textContent = myTier.icon;
+    mpEls.rankTitle.textContent = myTier.name;
+    mpEls.rankEarnings.textContent = `($${total})`;
     
-    // Highlight active tier row
-    let rows = mpEls.rankTiersList.querySelectorAll('.rank-tier-row');
-    rows.forEach((row, i) => {
-        row.classList.toggle('active', RANK_TIERS[i] === currentTier);
-    });
+    // Fetch global leaderboard
+    fetch('/api/leaderboard')
+        .then(r => r.json())
+        .then(data => {
+            if (!data || data.length === 0) {
+                mpEls.rankLeaderboard.innerHTML = '<p style="text-align:center; color:#9ca3af; font-size:0.8rem;">No scores yet!</p>';
+                return;
+            }
+            let html = '';
+            data.forEach((entry, i) => {
+                let tier = getTier(entry.score);
+                let isMe = entry.name === gameState.playerName;
+                html += `<div class="rank-tier-row ${isMe ? 'active' : ''}" style="margin-bottom:3px;">
+                    <span style="width:18px; text-align:center; font-size:0.75rem; color:#9ca3af;">${i+1}</span>
+                    <span style="font-size:0.85rem;">${tier.icon}</span>
+                    <span style="flex:1; font-size:0.8rem; font-weight:${isMe ? '800' : '600'}; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">${entry.name}</span>
+                    <span style="font-size:0.75rem; color:#10b981; font-weight:700;">$${entry.score}</span>
+                </div>`;
+            });
+            mpEls.rankLeaderboard.innerHTML = html;
+        })
+        .catch(() => {
+            mpEls.rankLeaderboard.innerHTML = '<p style="text-align:center; color:#ef4444; font-size:0.8rem;">Offline</p>';
+        });
+}
+
+function submitScore() {
+    let name = encodeURIComponent(gameState.playerName);
+    let score = gameState.totalEarnings;
+    fetch(`/api/submit_score?name=${name}&score=${score}`).catch(() => {});
 }
 
 // Toggle popups
