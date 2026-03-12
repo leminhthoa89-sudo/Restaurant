@@ -3,7 +3,7 @@ let gameState = {
     money: 10,     // Start with $10 to buy initial stock
     level: 1,
     reputation: 5.0,
-    slots: 3,      // Wait slots for customers at the counter
+    slots: 2,      // Default 2 slots now
     maxSlots: 4,
     speedMultiplier: 1,
     tray: [],      
@@ -381,9 +381,12 @@ function spawnCustomer(slotId) {
     let emoji = customerEmojis[Math.floor(Math.random() * customerEmojis.length)];
     let itemsAllowed = getUnlockedItems();
     
-    // Decide number of orders
-    let maxProgression = Math.min(3, Math.floor(gameState.day / 4) + 1);
-    let maxItems = Math.min(3, Math.ceil(Math.random() * maxProgression));
+    // Decide number of orders: 1 item before Day 20, 1-2 after Day 20
+    let maxItems = 1;
+    if (gameState.day > 20) {
+        maxItems = Math.random() > 0.6 ? 2 : 1;
+    }
+    
     let orders = [];
     for(let i=0; i<maxItems; i++) {
         orders.push(itemsAllowed[Math.floor(Math.random() * itemsAllowed.length)]);
@@ -574,11 +577,19 @@ function renderTray() {
             let item = MENU[itemKey];
             slot.className = 'tray-slot' + (neededItems.has(itemKey) ? ' matched' : '');
             slot.style.borderColor = item.color;
+            
+            // Item Content
+            let content = '';
             if (item.cat === 'juice') {
-                slot.innerHTML = `<div class="plastic-cup"><div class="liquid" style="background:${item.color};"></div><div class="cup-label">${item.rawIcon}</div></div>`;
+                content = `<div class="plastic-cup"><div class="liquid" style="background:${item.color};"></div><div class="cup-label">${item.rawIcon}</div></div>`;
             } else {
-                slot.innerHTML = `<div class="color-icon" style="background:${item.color}">${item.icon}</div>`;
+                content = `<div class="color-icon" style="background:${item.color}">${item.icon}</div>`;
             }
+            
+            // Trash Icon
+            let trash = `<div class="tray-discard" onclick="event.stopPropagation(); discardFromTray(${i})">🗑️</div>`;
+            
+            slot.innerHTML = content + trash;
             slot.onclick = () => serveFromTray(i);
         } else {
             slot.className = 'tray-slot empty';
@@ -712,6 +723,19 @@ function serveFromTray(trayIndex) {
     
     gameState.tray.splice(trayIndex, 1);
     renderTray();
+}
+
+function discardFromTray(trayIndex) {
+    let itemKey = gameState.tray[trayIndex];
+    let item = MENU[itemKey];
+    let penalty = Math.floor(item.price * 0.8);
+    
+    gameState.money = Math.max(0, gameState.money - penalty);
+    gameState.tray.splice(trayIndex, 1);
+    
+    showFloatingText(`-$${penalty} Waste`, els.holdingTray.children[trayIndex], true);
+    renderTray();
+    updateHUD();
 }
 
 // -- End of Day Logic --
