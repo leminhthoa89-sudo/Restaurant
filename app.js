@@ -23,7 +23,8 @@ let gameState = {
         cogs: 0,
         tips: 0
     },
-    activeQuest: null
+    activeQuest: null,
+    totalEarnings: parseInt(localStorage.getItem('totalEarnings') || '0')
 };
 
 // Item Data structured by Categories
@@ -483,6 +484,10 @@ function collectMoney(slotId) {
     gameState.money += total;
     gameState.dayStats.revenue += state.moneyOwed;
     gameState.dayStats.tips += state.tipsGiven;
+    
+    // Track lifetime earnings for ranking
+    gameState.totalEarnings += total;
+    localStorage.setItem('totalEarnings', gameState.totalEarnings);
     
     showFloatingText(`+$${total}`, els.slotsContainer.children[slotId]);
     
@@ -1016,9 +1021,15 @@ let playerRole = 'host';
 // Floating popup DOM refs
 const mpEls = {
     toggleQuest: document.getElementById('toggle-quest'),
+    toggleRank: document.getElementById('toggle-rank'),
     toggleMultiplayer: document.getElementById('toggle-multiplayer'),
     questPopup: document.getElementById('quest-popup'),
+    rankPopup: document.getElementById('rank-popup'),
     mpPopup: document.getElementById('mp-popup'),
+    rankBadge: document.getElementById('rank-badge'),
+    rankTitle: document.getElementById('rank-title'),
+    rankEarnings: document.getElementById('rank-earnings'),
+    rankTiersList: document.getElementById('rank-tiers-list'),
     btnPvp: document.getElementById('btn-pvp'),
     btnCoop: document.getElementById('btn-coop'),
     mpButtons: document.getElementById('mp-buttons'),
@@ -1031,21 +1042,58 @@ const mpEls = {
     btnCancel: document.getElementById('btn-cancel-match'),
 };
 
+// Ranking Tiers
+const RANK_TIERS = [
+    { name: 'Beginner', icon: '🌱', min: 0 },
+    { name: 'Apprentice', icon: '⭐', min: 500 },
+    { name: 'Expert', icon: '💎', min: 1000 },
+    { name: 'Master', icon: '👑', min: 2500 },
+    { name: 'Legend', icon: '🔥', min: 5000 },
+];
+
+function closeAllPopups() {
+    mpEls.questPopup.classList.add('hidden');
+    mpEls.rankPopup.classList.add('hidden');
+    mpEls.mpPopup.classList.add('hidden');
+    mpEls.toggleQuest.classList.remove('active');
+    mpEls.toggleRank.classList.remove('active');
+    mpEls.toggleMultiplayer.classList.remove('active');
+}
+
+function updateRankDisplay() {
+    let total = gameState.totalEarnings;
+    let currentTier = RANK_TIERS[0];
+    for (let t of RANK_TIERS) {
+        if (total >= t.min) currentTier = t;
+    }
+    mpEls.rankBadge.textContent = currentTier.icon;
+    mpEls.rankTitle.textContent = currentTier.name;
+    mpEls.rankEarnings.textContent = `Total: $${total}`;
+    
+    // Highlight active tier row
+    let rows = mpEls.rankTiersList.querySelectorAll('.rank-tier-row');
+    rows.forEach((row, i) => {
+        row.classList.toggle('active', RANK_TIERS[i] === currentTier);
+    });
+}
+
 // Toggle popups
 mpEls.toggleQuest.addEventListener('click', () => {
     let isOpen = !mpEls.questPopup.classList.contains('hidden');
-    mpEls.questPopup.classList.toggle('hidden');
-    mpEls.mpPopup.classList.add('hidden');
-    mpEls.toggleQuest.classList.toggle('active', !isOpen);
-    mpEls.toggleMultiplayer.classList.remove('active');
+    closeAllPopups();
+    if (!isOpen) { mpEls.questPopup.classList.remove('hidden'); mpEls.toggleQuest.classList.add('active'); }
+});
+
+mpEls.toggleRank.addEventListener('click', () => {
+    let isOpen = !mpEls.rankPopup.classList.contains('hidden');
+    closeAllPopups();
+    if (!isOpen) { mpEls.rankPopup.classList.remove('hidden'); mpEls.toggleRank.classList.add('active'); updateRankDisplay(); }
 });
 
 mpEls.toggleMultiplayer.addEventListener('click', () => {
     let isOpen = !mpEls.mpPopup.classList.contains('hidden');
-    mpEls.mpPopup.classList.toggle('hidden');
-    mpEls.questPopup.classList.add('hidden');
-    mpEls.toggleMultiplayer.classList.toggle('active', !isOpen);
-    mpEls.toggleQuest.classList.remove('active');
+    closeAllPopups();
+    if (!isOpen) { mpEls.mpPopup.classList.remove('hidden'); mpEls.toggleMultiplayer.classList.add('active'); }
 });
 
 function connectWS(mode) {

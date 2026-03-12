@@ -52,19 +52,16 @@
             </div>
         </header>
 
-        <!-- Floating Icon Buttons (Top-Left) -->
+        <!-- Floating Icon Buttons (Bottom-Left Corner) -->
         <div id="floating-icons">
-            <button class="float-icon-btn" id="toggle-quest" title="Daily Quest">
-                <i class="fa-solid fa-clipboard-check"></i>
-            </button>
-            <button class="float-icon-btn" id="toggle-multiplayer" title="Multiplayer">
-                <i class="fa-solid fa-globe"></i>
-            </button>
+            <button class="float-icon-btn" id="toggle-quest" title="Daily Quest">📋</button>
+            <button class="float-icon-btn" id="toggle-rank" title="Ranking">🏅</button>
+            <button class="float-icon-btn" id="toggle-multiplayer" title="Multiplayer">🌐</button>
         </div>
 
         <!-- Quest Popup -->
         <div id="quest-popup" class="float-popup glass-panel hidden">
-            <h3><i class="fa-solid fa-clipboard-check"></i> Daily Quest</h3>
+            <h3>📋 Daily Quest</h3>
             <p id="quest-desc">Loading...</p>
             <div class="quest-progress-bar">
                 <div id="quest-progress-fill"></div>
@@ -72,9 +69,26 @@
             </div>
         </div>
 
+        <!-- Ranking Popup -->
+        <div id="rank-popup" class="float-popup glass-panel hidden">
+            <h3>🏅 Your Rank</h3>
+            <div id="rank-tier-display">
+                <div id="rank-badge">🌱</div>
+                <div id="rank-title">Beginner</div>
+            </div>
+            <p id="rank-earnings">Total: $0</p>
+            <div id="rank-tiers-list">
+                <div class="rank-tier-row active"><span>🌱</span> Beginner <small>&lt;$500</small></div>
+                <div class="rank-tier-row"><span>⭐</span> Apprentice <small>$500</small></div>
+                <div class="rank-tier-row"><span>💎</span> Expert <small>$1,000</small></div>
+                <div class="rank-tier-row"><span>👑</span> Master <small>$2,500</small></div>
+                <div class="rank-tier-row"><span>🔥</span> Legend <small>$5,000</small></div>
+            </div>
+        </div>
+
         <!-- Multiplayer Popup -->
         <div id="mp-popup" class="float-popup glass-panel hidden">
-            <h3><i class="fa-solid fa-globe"></i> Multiplayer</h3>
+            <h3>🌐 Multiplayer</h3>
             <div id="mp-buttons">
                 <button class="mp-btn" id="btn-pvp">🏆 PvP Race</button>
                 <button class="mp-btn" id="btn-coop">🤝 Co-op Cafe</button>
