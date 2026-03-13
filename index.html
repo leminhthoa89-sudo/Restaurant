@@ -15,7 +15,6 @@
         <header id="header-hud">
             <div class="hud-item brand">
                 <i class="fa-solid fa-mug-hot"></i>
-                <h1>Pixel & Pour</h1>
             </div>
             
             <div class="hud-stats">
@@ -48,6 +47,9 @@
                 </button>
                 <button id="upgrades-btn" class="glass-btn primary">
                     <i class="fa-solid fa-store"></i> Shop Upgrades
+                </button>
+                <button id="auth-btn" class="glass-btn secondary">
+                    <i class="fa-solid fa-user"></i> Login
                 </button>
             </div>
         </header>
@@ -101,7 +103,7 @@
         </div>
 
         <main id="first-person-view">
-            <!-- Background / Customer Area (Top Half) -->
+            <!-- Background / Customer Area (Top Portion) -->
             <section id="customer-area">
                 <div id="dining-area">
                     <div class="bg-table" id="bt-0"></div>
@@ -114,48 +116,50 @@
                 </div>
             </section>
 
-            <!-- Player Bar Counter (Bottom Half) -->
-            <section id="counter-area">
-                <!-- Holding Tray is on the counter edge facing customers -->
-                <div class="counter-edge">
-                    <div class="tray-title">Serving Tray (<span id="tray-count">0</span>/<span id="tray-max">3</span>)</div>
-                    <div id="holding-tray">
-                        <!-- Ready drinks -->
-                    </div>
+            <!-- Horizontal Serving Tray (Front of Bar) -->
+            <div class="counter-edge">
+                <div class="tray-title">Tray <span id="tray-count">0</span>/<span id="tray-max">3</span></div>
+                <div id="holding-tray">
+                    <!-- Ready drinks injected by JS -->
                 </div>
+            </div>
 
-                <!-- Appliances Area (Juicer, Espresso, etc) -->
-                <div id="appliances-row">
-                    <div class="appliance locked" id="app-juice">
-                        <i class="fa-solid fa-blender"></i>
-                        <span>Juicer</span>
+            <!-- Interactive Area: Sidebar + Menu -->
+            <div id="player-interaction-area">
+                <!-- Sidebar (Left): Appliances -->
+                <aside id="counter-area">
+                    <div id="appliances-row">
+                        <div class="appliance locked" id="app-juice">
+                            <i class="fa-solid fa-blender"></i>
+                            <span>Juicer</span>
+                        </div>
+                        <div class="appliance locked" id="app-ice_cream">
+                            <i class="fa-solid fa-ice-cream"></i>
+                            <span>Freezer</span>
+                        </div>
+                        <div class="appliance locked" id="app-coffee">
+                            <i class="fa-solid fa-mug-hot"></i>
+                            <span>Espresso</span>
+                        </div>
+                        <div class="appliance locked" id="app-milk_tea">
+                            <i class="fa-solid fa-leaf"></i>
+                            <span>Tea</span>
+                        </div>
+                        <div class="appliance locked" id="app-yogurt">
+                            <i class="fa-solid fa-bowl-food"></i>
+                            <span>Yogurt</span>
+                        </div>
                     </div>
-                    <div class="appliance locked" id="app-ice_cream">
-                        <i class="fa-solid fa-ice-cream"></i>
-                        <span>Freezer</span>
-                    </div>
-                    <div class="appliance locked" id="app-coffee">
-                        <i class="fa-solid fa-mug-hot"></i>
-                        <span>Espresso</span>
-                    </div>
-                    <div class="appliance locked" id="app-milk_tea">
-                        <i class="fa-solid fa-leaf"></i>
-                        <span>Tea Brewer</span>
-                    </div>
-                    <div class="appliance locked" id="app-yogurt">
-                        <i class="fa-solid fa-bowl-food"></i>
-                        <span>Yogurt Maker</span>
-                    </div>
-                </div>
+                </aside>
 
-                <!-- Recipe / Menu Selector -->
-                <div id="ingredients-panel">
+                <!-- Menu Area (Right): Expanded Ingredients/Recipes -->
+                <section id="ingredients-panel">
                     <h3>Ingredients & Recipes</h3>
                     <div id="menu-board">
                         <!-- Items injected here based on unlocked categories -->
                     </div>
-                </div>
-            </section>
+                </section>
+            </div>
         </main>
 
         <!-- End of Day Summary Modal -->
@@ -200,7 +204,7 @@
                             <h3>Expand Counter Space</h3>
                             <p>Current Slots: <span id="table-count-view">3</span>/4</p>
                         </div>
-                        <button class="buy-btn" id="buy-table-btn">$<span id="table-cost">50</span></button>
+                        <button class="buy-btn" id="buy-table-btn">$200</button>
                     </div>
 
                     <div class="upgrade-card" id="upg-tray">
@@ -209,7 +213,7 @@
                             <h3>Expand Serving Tray</h3>
                             <p>Hold more drinks at once.</p>
                         </div>
-                        <button class="buy-btn" id="buy-tray-btn">$<span id="tray-cost">150</span></button>
+                        <button class="buy-btn" id="buy-tray-btn">$200</button>
                     </div>
                     
                     <div class="upgrade-card" id="upg-speed">
@@ -218,8 +222,36 @@
                             <h3>Master Barista Skills</h3>
                             <p>Appliances finish preparations faster.</p>
                         </div>
-                        <button class="buy-btn" id="buy-speed-btn">$<span id="speed-cost">75</span></button>
+                        <button class="buy-btn" id="buy-speed-btn">$75</button>
                     </div>
+
+                    <div class="upgrade-card locked" id="upg-equipment">
+                        <div class="upg-icon"><i class="fa-solid fa-blender-phone"></i></div>
+                        <div class="upg-info">
+                            <h3>New Equipment</h3>
+                            <p>Unlock juice, ice cream, coffee...</p>
+                        </div>
+                        <button class="buy-btn" id="buy-equipment-btn">$200</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Auth Modal -->
+        <div id="auth-modal" class="modal hidden">
+            <div class="modal-content glass-panel" style="max-width: 350px;">
+                <div class="modal-header">
+                    <h2 id="auth-title">Login to Save Progress</h2>
+                    <button id="close-auth-btn" class="icon-btn"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+                <div class="auth-form">
+                    <input type="text" id="auth-username" placeholder="Username" class="glass-input">
+                    <input type="password" id="auth-password" placeholder="Password" class="glass-input">
+                    <div class="auth-actions">
+                        <button id="btn-login" class="glass-btn primary">Login</button>
+                        <button id="btn-register" class="glass-btn secondary">Register</button>
+                    </div>
+                    <p id="auth-error" class="text-red" style="font-size: 0.8rem; margin-top: 10px; text-align: center;"></p>
                 </div>
             </div>
         </div>
@@ -238,6 +270,25 @@
         </div>
         
         <div id="notifications-container"></div>
+        
+        <!-- Inventory/Supplies Modal (Pre-Day) -->
+        <div id="supply-modal" class="modal hidden">
+            <div class="modal-content glass-panel" style="max-width: 600px;">
+                <div class="modal-header">
+                    <h2>📦 Daily Supply Shop</h2>
+                    <div class="money-mini">$<span id="supply-money-val">0</span></div>
+                </div>
+                <p style="margin-bottom: 20px; font-size: 0.9rem; opacity: 0.8;">Buy ingredients for the new day. Each pack contains 10 servings. Leftover stock carries over for 1 day.</p>
+                
+                <div id="supply-grid" class="supply-grid">
+                    <!-- Supply items injected by JS -->
+                </div>
+                
+                <div class="modal-footer" style="margin-top: 20px; text-align: right;">
+                    <button id="start-day-after-supply-btn" class="glass-btn primary">Open Shop & Start Day</button>
+                </div>
+            </div>
+        </div>
     </div>
 
     <script src="app.js"></script>

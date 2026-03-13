@@ -11,19 +11,22 @@ import os
 # --- Combined HTTP & WebSocket Server ---
 PORT = 8003
 LB_FILE = 'leaderboard.json'
+USERS_FILE = 'users.json'
 
 rooms = {} # roomCode: {mode: 'coop|pvp', players: [websocket], gameState: {...}}
 player_rooms = {} # websocket: roomCode
+logged_in_users = {} # websocket: username
 
-# Leaderboard helpers
-def load_leaderboard():
-    if os.path.exists(LB_FILE):
-        with open(LB_FILE, 'r') as f:
-            return json.load(f)
+# User & Leaderboard helpers
+def load_json(filepath):
+    if os.path.exists(filepath):
+        with open(filepath, 'r') as f:
+            try: return json.load(f)
+            except: return []
     return []
 
-def save_leaderboard(data):
-    with open(LB_FILE, 'w') as f:
+def save_json(filepath, data):
+    with open(filepath, 'w') as f:
         json.dump(data, f)
 
 def generate_room_code():
@@ -118,6 +121,47 @@ async def handle_client(websocket, path):
                                 'type': 'SYNC_EVENT',
                                 'eventData': data.get('eventData')
                             }))
+            
+            # --- AUTH & SAVE ---
+            elif action == 'REGISTER':
+                username = data.get('username')
+                password = data.get('password')
+                users = load_json(USERS_FILE)
+                if any(u['username'] == username for u in users):
+                    await websocket.send(json.dumps({'type': 'ERROR', 'msg': 'User exists'}))
+                else:
+                    users.append({'username': username, 'password': password, 'progress': None})
+                    save_json(USERS_FILE, users)
+                    await websocket.send(json.dumps({'type': 'REGISTER_SUCCESS'}))
+
+            elif action == 'LOGIN':
+                username = data.get('username')
+                password = data.get('password')
+                users = load_json(USERS_FILE)
+                user = next((u for u in users if u['username'] == username and u['password'] == password), None)
+                if user:
+                    logged_in_users[websocket] = username
+                    await websocket.send(json.dumps({
+                        'type': 'LOGIN_SUCCESS', 
+                        'username': username,
+                        'progress': user.get('progress')
+                    }))
+                else:
+                    await websocket.send(json.dumps({'type': 'ERROR', 'msg': 'Invalid login'}))
+
+            elif action == 'SAVE_PROGRESS':
+                username = logged_in_users.get(websocket)
+                if username:
+                    progress = data.get('progress')
+                    users = load_json(USERS_FILE)
+                    for u in users:
+                        if u['username'] == username:
+                            u['progress'] = progress
+                            break
+                    save_json(USERS_FILE, users)
+                    await websocket.send(json.dumps({'type': 'SAVE_SUCCESS'}))
+                else:
+                    await websocket.send(json.dumps({'type': 'ERROR', 'msg': 'Not logged in'}))
 
     except websockets.exceptions.ConnectionClosed:
         pass
@@ -148,7 +192,7 @@ async def process_request(path, request_headers):
     
     # --- API: GET leaderboard ---
     if raw_path == "/api/leaderboard":
-        lb = load_leaderboard()
+        lb = load_json(LB_FILE)
         body = json.dumps(lb).encode()
         headers = [
             ("Content-Type", "application/json"),
@@ -168,7 +212,7 @@ async def process_request(path, request_headers):
         name = params.get('name', ['Unknown'])[0]
         score = int(params.get('score', [0])[0])
         
-        lb = load_leaderboard()
+        lb = load_json(LB_FILE)
         # Update existing or add new
         found = False
         for entry in lb:
@@ -184,7 +228,7 @@ async def process_request(path, request_headers):
         lb.sort(key=lambda x: x['score'], reverse=True)
         # Keep top 50
         lb = lb[:50]
-        save_leaderboard(lb)
+        save_json(LB_FILE, lb)
         
         body = json.dumps({'ok': True}).encode()
         headers = [

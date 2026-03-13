@@ -24,7 +24,17 @@ let gameState = {
         tips: 0
     },
     activeQuest: null,
-    totalEarnings: parseInt(localStorage.getItem('totalEarnings') || '0')
+    totalEarnings: parseInt(localStorage.getItem('totalEarnings') || '0'),
+    
+    // V19 Progression
+    unlockedCategoryIndex: 1, 
+    boughtTrayCount: 0,
+    equipmentPrice: 200,
+    trayPrice: 200,
+    inventory: {}, 
+    stockAge: {},  
+    closedItems: [], // Items user decided to stop selling today
+    isLoggedIn: false
 };
 
 // Item Data structured by Categories
@@ -37,35 +47,35 @@ const MENU_CATEGORIES = {
 };
 
 // Added 'cost' to track Cost of Goods Sold (COGS)
+// 3-4 flavors max per category for cleaner UI
 const MENU = {
-    // Juices (Category uses Blender)
+    // Juices
     juice_orange: { cat: 'juice', name: 'Orange', price: 5, cost: 2, time: 1000, color: '#fed7aa', icon: '🥤', rawIcon: '🍊' },
     juice_apple: { cat: 'juice', name: 'Apple', price: 5, cost: 2, time: 1000, color: '#bbf7d0', icon: '🥤', rawIcon: '🍏' },
     juice_watermelon: { cat: 'juice', name: 'Melon', price: 6, cost: 3, time: 1200, color: '#fecdd3', icon: '🥤', rawIcon: '🍉' },
-    // Ice Creams (Category uses Freezer)
+    // Ice Creams
     ice_vanilla: { cat: 'ice_cream', name: 'Vanilla', price: 8, cost: 4, time: 1500, color: '#fef3c7', icon: '🍦', rawIcon: '🥛' },
     ice_choco: { cat: 'ice_cream', name: 'Choco', price: 9, cost: 4, time: 1500, color: '#9a3412', icon: '🍦', rawIcon: '🍫' },
     ice_berry: { cat: 'ice_cream', name: 'Berry', price: 9, cost: 4, time: 1800, color: '#fbcfe8', icon: '🍦', rawIcon: '🍓' },
-    // Coffees (Category uses Espresso)
+    // Coffees
     coffee_black: { cat: 'coffee', name: 'Black', price: 15, cost: 5, time: 2000, color: '#1c1917', icon: '☕' },
     coffee_milk: { cat: 'coffee', name: 'Latte', price: 18, cost: 6, time: 2200, color: '#d6d3d1', icon: '🥛' },
     coffee_cap: { cat: 'coffee', name: 'Cappu', price: 20, cost: 8, time: 2500, color: '#a8a29e', icon: '🤎' },
-    // Milk Teas (Category uses Tea Brewer)
+    // Milk Teas
     tea_classic: { cat: 'milk_tea', name: 'Classic', price: 25, cost: 10, time: 2500, color: '#fed7aa', icon: '🧋' },
     tea_taro: { cat: 'milk_tea', name: 'Taro', price: 28, cost: 12, time: 2800, color: '#e9d5ff', icon: '💜' },
     tea_matcha: { cat: 'milk_tea', name: 'Matcha', price: 28, cost: 12, time: 2800, color: '#bbf7d0', icon: '🍵' },
-    // Yogurts (Category uses Yogurt Maker)
+    // Yogurts
     yogurt_plain: { cat: 'yogurt', name: 'Plain', price: 30, cost: 15, time: 3000, color: '#f8fafc', icon: '🥣' },
-    yogurt_berry: { cat: 'yogurt', name: 'Berry', price: 35, cost: 18, time: 3200, color: '#fbcfe8', icon: '🫐' },
-    yogurt_mango: { cat: 'yogurt', name: 'Mango', price: 35, cost: 18, time: 3200, color: '#fef08a', icon: '🥭' }
+    yogurt_berry: { cat: 'yogurt', name: 'Berry', price: 35, cost: 18, time: 3200, color: '#fbcfe8', icon: '🫐' }
 };
 
 // Upgrade Costs
 let costs = {
-    slot: 50,
-    level: 100,
+    slot: 200,
     speed: 75,
-    tray: 150
+    tray: 200,
+    equipment: 200
 };
 
 const els = {
@@ -101,14 +111,41 @@ const els = {
     eodProfit: document.getElementById('eod-profit'),
     nextDayBtn: document.getElementById('start-next-day-btn'),
     
+    // Inventory
+    supplyModal: document.getElementById('supply-modal'),
+    supplyGrid: document.getElementById('supply-grid'),
+    supplyMoney: document.getElementById('supply-money-val'),
+    startAfterSupplyBtn: document.getElementById('start-day-after-supply-btn'),
+    
     // Leaderboard Modal
     leaderboardBtn: document.getElementById('leaderboard-btn'),
     leaderboardModal: document.getElementById('leaderboard-modal'),
     closeLbBtn: document.getElementById('close-lb-btn'),
     lbList: document.getElementById('lb-list'),
     
+    // Upgrades
+    upgTray: document.getElementById('upg-tray'),
+    upgEquipment: document.getElementById('upg-equipment'),
+    closeLbBtn: document.getElementById('close-lb-btn'),
+    lbList: document.getElementById('lb-list'),
+    
     notifications: document.getElementById('notifications-container'),
 
+    // Auth
+    authBtn: document.getElementById('auth-btn'),
+    authModal: document.getElementById('auth-modal'),
+    closeAuthBtn: document.getElementById('close-auth-btn'),
+    authUsername: document.getElementById('auth-username'),
+    authPass: document.getElementById('auth-password'),
+    btnLogin: document.getElementById('btn-login'),
+    btnRegister: document.getElementById('btn-register'),
+    authError: document.getElementById('auth-error'),
+
+    // Upgrade Cards & Buttons
+    upgEquipment: document.getElementById('upg-equipment'),
+    buyEquipmentBtn: document.getElementById('buy-equipment-btn'),
+    upgTray: document.getElementById('upg-tray'),
+    
     // Quests
     questDesc: document.getElementById('quest-desc'),
     questBarFill: document.getElementById('quest-progress-fill'),
@@ -143,17 +180,31 @@ function initGame() {
         els.opponentHud.classList.add('hidden');
     }
     
+    // V22: Init Day 1 Stock for free
+    if (gameState.day === 1 && Object.keys(gameState.inventory).length === 0) {
+        gameState.unlockedItems.forEach(id => {
+            gameState.inventory[id] = 10;
+            gameState.stockAge[id] = 0;
+        });
+    }
+
     buildMenuUI();
-    generateDailyQuest(); // First day quest
+    generateDailyQuest();
     updateHUD();
     renderSlots();
     renderTray();
     updateAppliances();
-    
+    setupEventListeners();
+    connectWS(); 
+
+    // Mandatory Login Popup
+    setTimeout(() => {
+        if (!gameState.isLoggedIn) {
+            openAuthModal();
+        }
+    }, 1000);
+
     // Game Loop
-    // 8 hours = 480 minutes 
-    // We want 2 real life minutes (120 seconds) to equal 1 Day (480 in-game minutes)
-    // 120 / 480 = 0.25 seconds (250ms) per in-game minute
     if (currentMode !== 'coop' || playerRole === 'host') {
         setInterval(gameLoop, 150); 
     }
@@ -163,6 +214,13 @@ function initGame() {
         setInterval(simulateOpponentScore, 5000);
     } else if (currentMode === 'coop_bot') {
         setInterval(simulateBusserActions, 2000);
+    }
+}
+
+function openAuthModal() {
+    if (els.authModal) {
+        els.authModal.classList.remove('hidden');
+        if (els.authError) els.authError.textContent = '';
     }
 }
 
@@ -183,11 +241,14 @@ function buildMenuUI() {
     els.menuBoard.innerHTML = '';
     
     for (const [catKey, catData] of Object.entries(MENU_CATEGORIES)) {
-        els.menuBoard.innerHTML += `<div class="category-title">${catData.name}</div>`;
+        if (!gameState.unlockedCategories.includes(catKey)) continue;
+
+        els.menuBoard.innerHTML += `<div class="category-title" style="grid-column: 1/-1; color: white; margin-top: 10px; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">${catData.name}</div>`;
         
         for (const [itemKey, itemData] of Object.entries(MENU)) {
             if (itemData.cat === catKey) {
                 const isLocked = !gameState.unlockedItems.includes(itemKey);
+                const stock = gameState.inventory[itemKey] || 0;
                 
                 let isJuice = catKey === 'juice';
                 let isIceCream = catKey === 'ice_cream';
@@ -195,7 +256,7 @@ function buildMenuUI() {
                 
                 if (isJuice) iconHTML = `<div class="fruit-plate">${itemData.rawIcon}</div>`;
                 else if (isIceCream) iconHTML = `
-                    <div class="ice-cream-cone">
+                    <div class="ice-cream-cone" style="transform: scale(0.6); margin: 0;">
                         <div class="scoop" style="background:${itemData.color}; box-shadow: inset -5px -5px 10px rgba(0,0,0,0.1);"></div>
                         <div class="cone"></div>
                     </div>
@@ -203,11 +264,10 @@ function buildMenuUI() {
                 else iconHTML = `<div class="color-icon" style="background:${itemData.color}">${itemData.icon}</div>`;
                     
                 let btnHTML = `
-                    <button class="menu-item-btn ${isLocked ? 'locked' : ''}" data-item="${itemKey}" id="btn-${itemKey}">
+                    <button class="menu-item-btn glass-panel ${isLocked ? 'locked' : ''} ${stock <= 0 ? 'out-of-stock' : ''}" data-item="${itemKey}" id="btn-${itemKey}">
                         ${iconHTML}
                         <div class="item-name">${itemData.name}</div>
-                        <div class="item-price">Sell: $${itemData.price}</div>
-                        <div class="item-cost">Cost: $${itemData.cost}</div>
+                        <div class="stock-indicator ${stock < 3 ? 'text-red' : ''}">${stock} left</div>
                     </button>
                 `;
                 els.menuBoard.innerHTML += btnHTML;
@@ -223,6 +283,36 @@ function buildMenuUI() {
             }
         });
     });
+}
+
+function showOutOfStockOptions(itemKey, btnElement) {
+    const item = MENU[itemKey];
+    const isRemoveConfirmed = confirm(`"${item.name}" is OUT OF STOCK!\n\nOK: Emergency Restock 10pcs ($${Math.floor(item.cost * 1.5 * 10)})\nCancel: Close this item for today ($100 fee)`);
+    
+    if (isRemoveConfirmed) {
+        // Restock
+        const restockCost = Math.floor(item.cost * 1.5 * 10);
+        if (gameState.money >= restockCost) {
+            gameState.money -= restockCost;
+            gameState.inventory[itemKey] = 10;
+            showNotification(`Restocked ${item.name}!`, "success");
+            updateHUD();
+            buildMenuUI();
+        } else {
+            showNotification("Not enough money for emergency restock!", "error");
+        }
+    } else {
+        // Close item
+        if (gameState.money >= 100) {
+            gameState.money -= 100;
+            gameState.closedItems.push(itemKey);
+            showNotification(`${item.name} closed for today.`, "info");
+            updateHUD();
+            buildMenuUI();
+        } else {
+            showNotification("Not enough money to close the item!", "error");
+        }
+    }
 }
 
 function formatTime(minutes) {
@@ -269,17 +359,26 @@ function updateHUD() {
     if (gameState.slots >= gameState.maxSlots) els.buySlotBtn.textContent = "MAX";
     else els.buySlotBtn.innerHTML = `$${costs.slot}`;
     
-    // speed and tray Logic
+    // Speed and Tray Logic
     if(els.buySpeedBtn) {
         els.buySpeedBtn.disabled = gameState.money < costs.speed;
     }
     
-    if(els.buyTrayBtn) {
-        els.buyTrayBtn.disabled = gameState.money < costs.tray || gameState.maxTray >= 6;
-        if (gameState.maxTray >= 6) els.buyTrayBtn.textContent = "MAX";
-        else els.buyTrayBtn.innerHTML = `$${costs.tray}`;
-    }
-    
+    // Tray Capacity (Day 10+)
+    const canBuyTray = gameState.day >= 10;
+    els.upgTray.classList.toggle('locked', !canBuyTray);
+    els.buyTrayBtn.innerHTML = `$${gameState.trayPrice}`;
+    els.buyTrayBtn.disabled = !canBuyTray || gameState.money < gameState.trayPrice || gameState.maxTray >= 10;
+    if (gameState.maxTray >= 10) els.buyTrayBtn.textContent = "MAX";
+
+    // Equipment (Day 5+)
+    const totalCats = Object.keys(MENU_CATEGORIES).length;
+    const canBuyEquip = gameState.day >= 5 && gameState.unlockedCategoryIndex < totalCats - 1;
+    els.upgEquipment.classList.toggle('locked', !canBuyEquip);
+    els.buyEquipmentBtn.innerHTML = `$${gameState.equipmentPrice}`;
+    els.buyEquipmentBtn.disabled = !canBuyEquip || gameState.money < gameState.equipmentPrice;
+    if (gameState.unlockedCategoryIndex >= totalCats - 1) els.buyEquipmentBtn.textContent = "UNLOCKED ALL";
+
     // Broadcast Score in PvP
     if (currentMode === 'pvp' && ws && ws.readyState === 1) {
         ws.send(JSON.stringify({ action: 'SCORE_UPDATE', score: gameState.dayStats.revenue }));
@@ -325,6 +424,13 @@ function gameLoop() {
     
     // Tick Time
     gameState.timeMinutes += 1;
+    
+    // Scale Slots after Day 5
+    if (gameState.day >= 5 && gameState.slots < 3) {
+        gameState.slots = 3;
+        renderSlots();
+    }
+    
     updateHUD();
     
     if (gameState.timeMinutes >= gameState.endTime) {
@@ -379,12 +485,18 @@ function gameLoop() {
 
 function spawnCustomer(slotId) {
     let emoji = customerEmojis[Math.floor(Math.random() * customerEmojis.length)];
-    let itemsAllowed = getUnlockedItems();
+    // V22: Only allow items that aren't closed
+    let itemsAllowed = getUnlockedItems().filter(id => !gameState.closedItems.includes(id));
     
-    // Decide number of orders: 1 item before Day 20, 1-2 after Day 20
+    if (itemsAllowed.length === 0) {
+        console.warn("No items allowed to spawn customer!");
+        return;
+    }
+    
+    // Decide number of orders: 1 item before Day 10, 1-3 after Day 10
     let maxItems = 1;
-    if (gameState.day > 20) {
-        maxItems = Math.random() > 0.6 ? 2 : 1;
+    if (gameState.day >= 10) {
+        maxItems = Math.floor(Math.random() * 3) + 1;
     }
     
     let orders = [];
@@ -396,15 +508,29 @@ function spawnCustomer(slotId) {
         status: 'waiting',
         customer: emoji,
         orders: orders,
-        maxPatience: 60, // Slower timer means we need less ticks (60 seconds)
+        maxPatience: 60,
         patience: 60,
         moneyOwed: 0,
         tipsGiven: 0,
-        spawnTime: gameState.timeMinutes // Track who came first
+        spawnTime: gameState.timeMinutes
     };
     
     updateSlotUI(slotId);
-    renderTray(); // Check if tray has something they want already
+    checkTrayMatches();
+}
+
+
+function checkTrayMatches() {
+    // Check if any item in tray can be served to any customer
+    const itemsInTray = [...gameState.tray];
+    for(let i=0; i<gameState.slots; i++) {
+        let state = slotStates[i];
+        if(state.status === 'waiting') {
+            state.orders.forEach(itemKey => {
+                // To-be-implemented matching logic
+            });
+        }
+    }
 }
 
 function updateSlotUI(slotId) {
@@ -414,7 +540,7 @@ function updateSlotUI(slotId) {
     let state = slotStates[slotId];
     wrapper.innerHTML = '';
     
-    if (state.status === 'waiting' || state.status === 'eating') {
+    if (state.status === 'waiting' || state.status === 'eating' || state.status === 'dirty') {
         let customerHTML = `<div class="customer-figure">`;
         
         // Patience Bar setup
@@ -502,58 +628,82 @@ function collectMoney(slotId) {
     updateHUD();
 }
 
+// -- Serving Logic --
+function serveFromTray(trayIndex) {
+    // Find a customer who needs this item
+    let itemKey = gameState.tray[trayIndex];
+    let matchedSlotId = -1;
+    let orderIndex = -1;
+
+    for (let i = 0; i < gameState.slots; i++) {
+        let state = slotStates[i];
+        if (state.status === 'waiting') {
+            // Find the first index of the item that hasn't been served yet
+            let idx = state.orders.findIndex((key, j) => {
+                let servedIndices = state.itemsServed || [];
+                return key === itemKey && !servedIndices.includes(j);
+            });
+            if (idx !== -1) {
+                matchedSlotId = i;
+                orderIndex = idx;
+                break;
+            }
+        }
+    }
+
+    if (matchedSlotId !== -1) {
+        let state = slotStates[matchedSlotId];
+        if (!state.itemsServed) state.itemsServed = [];
+        state.itemsServed.push(orderIndex);
+        
+        // Remove from tray
+        gameState.tray.splice(trayIndex, 1);
+        
+        // Accumulate price
+        let itemPrice = MENU[itemKey].price;
+        state.moneyOwed += itemPrice;
+        state.tipsGiven += Math.floor(itemPrice * 0.1); // 10% tip for matched item
+        
+        showNotification(`Served ${MENU[itemKey].icon}!`, 'success');
+        
+        // Check if fully served
+        if (state.itemsServed.length === state.orders.length) {
+            handleCustomerLeave(matchedSlotId, false);
+        } else {
+            updateSlotUI(matchedSlotId);
+            renderTray();
+            syncCoopState();
+        }
+    } else {
+        showNotification("No one is waiting for that right now.", 'error');
+    }
+}
+
 function handleCustomerLeave(slotId, angry = false) {
     let state = slotStates[slotId];
-    
+    let wrapper = els.slotsContainer.children[slotId];
+    if (!wrapper) return;
+
     if (angry) {
-        showFloatingText("Angry!", els.slotsContainer.children[slotId], true);
+        showFloatingText("Angry!", wrapper, true);
         gameState.reputation = Math.max(1, gameState.reputation - 0.5);
-        
-        // Animate exit
-        let fig = els.slotsContainer.children[slotId].querySelector('.customer-figure');
-        if(fig) fig.classList.add('leaving');
-        
-        setTimeout(() => {
-            state.status = currentMode === 'coop' ? 'dirty' : 'empty';
-            state.orders = [];
-            updateSlotUI(slotId);
-            updateHUD();
-        }, 500);
+        state.status = 'empty';
     } else {
-        // Full served
-        let customerEmoji = state.customer;
-        
-        // Auto collect immediately when served
-        collectMoney(slotId); 
-        
-        // Let the customer figure 'leave' the bar slot
-        let fig = els.slotsContainer.children[slotId].querySelector('.customer-figure');
-        if(fig) fig.classList.add('leaving');
-        
-        // Route customer to a background dining table
-        let emptyTableIdx = tableStates.findIndex(t => t.status === 'empty');
-        if (emptyTableIdx > -1) {
-            tableStates[emptyTableIdx].status = 'occupied';
-            tableStates[emptyTableIdx].customer = customerEmoji;
-            updateDiningTables();
-            
-            // Stay for 20 real seconds then leave
-            setTimeout(() => {
-                tableStates[emptyTableIdx].status = currentMode === 'coop' ? 'dirty' : 'empty';
-                tableStates[emptyTableIdx].customer = null;
-                updateDiningTables();
-                syncCoopState(); // ensure we broadcast this
-            }, 20000); 
-        }
-        
-        setTimeout(() => {
-            state.status = currentMode === 'coop' ? 'dirty' : 'empty';
-            state.orders = [];
-            updateSlotUI(slotId);
-            renderTray(); // Re-evaluate logic for highlights
-            syncCoopState();
-        }, 500); // Clear slot shortly after they walk away
+        collectMoney(slotId);
+        state.status = 'empty';
     }
+    
+    // Animate exit
+    let fig = wrapper.querySelector('.customer-char');
+    if(fig) fig.classList.add('leaving');
+    
+    setTimeout(() => {
+        state.status = 'empty';
+        state.orders = [];
+        state.itemsServed = [];
+        updateSlotUI(slotId);
+        updateHUD();
+    }, 500);
 }
 
 // -- Making Drinks (Appliances) & Tray --
@@ -613,15 +763,20 @@ function prepareDrink(itemKey, btnElement) {
         showFloatingText("Tray Full!", btnElement, true);
         return;
     }
-    if (gameState.money < item.cost) {
-        showFloatingText("Not enough $ for ingredients!", btnElement, true);
+    // V22: Check Stock
+    const stock = gameState.inventory[itemKey] || 0;
+    if (stock <= 0) {
+        showOutOfStockOptions(itemKey, btnElement);
         return;
     }
-    
-    // Deduct cost
-    gameState.money -= item.cost;
+
+    // Deduct stock (cost is paid during Pre-Day buy, or Emergency)
+    gameState.inventory[itemKey]--;
+    gameState.stockAge[itemKey] = 0; // Reset age if used
+
     gameState.dayStats.cogs += item.cost;
     updateHUD();
+    buildMenuUI(); // Refresh stock counts
     
     // Lock buttons of the same category during prep
     let allBtns = document.querySelectorAll('.menu-item-btn:not(.locked)');
@@ -742,32 +897,53 @@ function discardFromTray(trayIndex) {
 function endDay() {
     gameState.isDayActive = false;
     
-    // Clear out customers who are still waiting (force leave with money, no penalty)
+    // Clear out customers who are still waiting
     for (let i = 0; i < gameState.slots; i++) {
         let s = slotStates[i];
         if (s.status !== 'empty') {
             s.status = 'empty';
             s.orders = [];
-            updateSlotUI(i); // Clean slate for morning basically
+            updateSlotUI(i);
         }
     }
     
-    // Calculate totals
     let revenue = gameState.dayStats.revenue;
     let cogs = gameState.dayStats.cogs;
     let tips = gameState.dayStats.tips;
     let net = revenue + tips - cogs;
+
+    // V22: Carryover & Waste Logic
+    let wasteTotal = 0;
+    for (let id in gameState.inventory) {
+        if (gameState.inventory[id] > 0) {
+            gameState.stockAge[id] = (gameState.stockAge[id] || 0) + 1;
+            if (gameState.stockAge[id] >= 2) {
+                // Waste it (charge 50% of cost as disposal fee)
+                const wasteCost = Math.floor(gameState.inventory[id] * MENU[id].cost * 0.5);
+                wasteTotal += wasteCost;
+                gameState.inventory[id] = 0;
+                gameState.stockAge[id] = 0;
+            }
+        }
+    }
     
+    gameState.money -= wasteTotal;
+    if (wasteTotal > 0) showNotification(`Wasted stock cost: -$${wasteTotal}`, "error");
+
     els.eodDayNum.textContent = gameState.day;
     els.eodRevenue.textContent = revenue;
     els.eodCogs.textContent = cogs;
     els.eodTips.textContent = tips;
-    els.eodProfit.textContent = (net >= 0 ? `+$${net}` : `-$${Math.abs(net)}`);
-    els.eodProfit.className = (net >= 0 ? 'text-green' : 'text-red');
+    
+    // Profit includes waste
+    const totalProfit = net - wasteTotal;
+    els.eodProfit.textContent = (totalProfit >= 0 ? `+$${totalProfit}` : `-$${Math.abs(totalProfit)}`);
+    els.eodProfit.className = (totalProfit >= 0 ? 'text-green' : 'text-red');
     
     // Save to Leaderboard
     saveLeaderboard(revenue);
-    submitScore(); // Push to server global leaderboard
+    submitScore(); 
+    saveGameToServer();
     
     els.eodModal.classList.remove('hidden');
 }
@@ -813,27 +989,93 @@ function renderLeaderboard() {
 
 els.nextDayBtn.addEventListener('click', () => {
     els.eodModal.classList.add('hidden');
-    gameState.day++;
-    gameState.timeMinutes = 540; // Reset to 09:00 AM
     
-    // Reset Stats
+    // Day 2+ starts with supply modal
+    if (gameState.day >= 1) {
+        openSupplyModal();
+    } else {
+        startDay(); // Day 1 might be special or handled during init
+    }
+});
+
+function openSupplyModal() {
+    els.supplyMoney.textContent = gameState.money;
+    renderSupplyGrid();
+    els.supplyModal.classList.remove('hidden');
+}
+
+function renderSupplyGrid() {
+    els.supplyGrid.innerHTML = '';
+    
+    // Only show items from unlocked categories
+    for (const [id, item] of Object.entries(MENU)) {
+        if (!gameState.unlockedCategories.includes(item.cat)) continue;
+        
+        const currentStock = gameState.inventory[id] || 0;
+        const packCost = item.cost * 10;
+        
+        const card = document.createElement('div');
+        card.className = 'supply-card';
+        card.innerHTML = `
+            <div class="icon">${item.icon}</div>
+            <div class="name">${item.name}</div>
+            <div class="cost">$${packCost} <small>(10pcs)</small></div>
+            <div class="current-stock">In Stock: ${currentStock}</div>
+            <button class="glass-btn primary" onclick="buySupplyPack('${id}')" ${gameState.money < packCost ? 'disabled' : ''}>Buy Pack</button>
+        `;
+        els.supplyGrid.appendChild(card);
+    }
+}
+
+// Global scope for onclick
+window.buySupplyPack = (itemId) => {
+    const item = MENU[itemId];
+    const packCost = item.cost * 10;
+    
+    if (gameState.money >= packCost) {
+        gameState.money -= packCost;
+        gameState.inventory[itemId] = (gameState.inventory[itemId] || 0) + 10;
+        gameState.stockAge[itemId] = 0; // Fresh stock
+        
+        showNotification(`Bought 10x ${item.name}`, "success");
+        openSupplyModal(); // Refresh UI
+        updateHUD();
+    }
+};
+
+els.startAfterSupplyBtn.addEventListener('click', () => {
+    // Check if at least one item has stock
+    let totalStock = Object.values(gameState.inventory).reduce((a, b) => a + b, 0);
+    if (totalStock === 0) {
+        alert("You need to buy at least some ingredients to open the shop!");
+        return;
+    }
+    
+    els.supplyModal.classList.add('hidden');
+    startDay();
+});
+
+function startDay() {
+    gameState.day++;
+    gameState.closedItems = []; // Reset closures
+    gameState.timeMinutes = 540; // 09:00 AM
     gameState.dayStats = { revenue: 0, cogs: 0, tips: 0 };
     
     generateDailyQuest();
     
-    // Clear table dirts
+    // Clear slots
     for(let i=0; i<gameState.slots; i++) {
         slotStates[i].status = 'empty';
         slotStates[i].orders = [];
         updateSlotUI(i);
     }
     
-    // Process unlock progression
     processDayProgression();
     
     gameState.isDayActive = true;
     updateHUD();
-});
+    buildMenuUI();
+}
 
 function processDayProgression() {
     let unlockedSomething = false;
@@ -1166,8 +1408,13 @@ function connectWS(mode) {
     ws = new WebSocket(`${wsProtocol}//${location.host}`);
     
     ws.onopen = () => {
-        mpEls.matchStatusText.textContent = "Connected. Creating Room...";
-        ws.send(JSON.stringify({ action: 'CREATE_ROOM', mode: mode }));
+        if (mode) {
+            mpEls.matchStatusText.textContent = "Connected. Creating Room...";
+            ws.send(JSON.stringify({ action: 'CREATE_ROOM', mode: mode }));
+        } else {
+            console.log("WebSocket connected for background services.");
+            // If already had local storage login, try to "re-login" or just wait
+        }
     };
     
     ws.onmessage = (e) => {
@@ -1217,6 +1464,28 @@ function connectWS(mode) {
             softRebootForMultiplayer();
         } else if (msg.type === 'OPPONENT_SCORE') {
             els.opponentMoney.textContent = msg.score;
+        } else if (msg.type === 'REGISTER_SUCCESS') {
+            showNotification("Account created! You can now login.", 'success');
+            els.btnLogin.click(); // Switch view if needed
+        } else if (msg.type === 'LOGIN_SUCCESS') {
+            localStorage.setItem('isLoggedIn', 'true');
+            gameState.playerName = msg.username;
+            showNotification(`Welcome back, ${msg.username}!`, 'success');
+            els.authModal.classList.add('hidden');
+            els.authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> ${msg.username}`;
+            if (msg.progress) {
+                Object.assign(gameState, msg.progress);
+                buildMenuUI();
+                updateAppliances();
+                updateHUD();
+                renderSlots();
+                renderTray();
+            }
+        } else if (msg.type === 'SAVE_SUCCESS') {
+            showNotification("Progress saved to cloud!", 'success');
+        } else if (msg.type === 'ERROR') {
+            if (els.authError) els.authError.textContent = msg.msg;
+            showNotification(msg.msg, 'error');
         } else if (msg.type === 'SYNC_EVENT' && playerRole === 'joiner') {
             gameState = msg.eventData.gameState;
             slotStates = msg.eventData.slotStates;
@@ -1376,3 +1645,122 @@ mpEls.btnCancel.addEventListener('click', () => {
 // Auto-start single-player on page load!
 initGame();
 
+
+// --- V19 Logic: Shop, Auth & Multi-order ---
+
+function showNotification(msg, type='info') {
+    const n = document.createElement('div');
+    n.className = `notification ${type}`;
+    n.textContent = msg;
+    els.notifications.appendChild(n);
+    setTimeout(() => n.classList.add('hide'), 2500);
+    setTimeout(() => n.remove(), 3000);
+}
+
+function setupEventListeners() {
+    if (els.buyTrayBtn) els.buyTrayBtn.addEventListener('click', buyTraySlot);
+    if (els.buyEquipmentBtn) els.buyEquipmentBtn.addEventListener('click', buyEquipment);
+    
+    // Auth listeners
+    if (els.authBtn) {
+        els.authBtn.addEventListener('click', () => {
+            els.authModal.classList.remove('hidden');
+            els.authError.textContent = '';
+        });
+    }
+    if (els.closeAuthBtn) els.closeAuthBtn.addEventListener('click', () => els.authModal.classList.add('hidden'));
+    
+    if (els.btnRegister) els.btnRegister.addEventListener('click', () => authAction('REGISTER'));
+    if (els.btnLogin) els.btnLogin.addEventListener('click', () => authAction('LOGIN'));
+
+    // Upgrades Modal
+    if (els.upgradesBtn) {
+        els.upgradesBtn.addEventListener('click', () => {
+            els.upgradesModal.classList.remove('hidden');
+            updateHUD();
+        });
+    }
+    if (els.closeModalBtn) els.closeModalBtn.addEventListener('click', () => els.upgradesModal.classList.add('hidden'));
+
+    // Table Upgrades
+    if (els.buySlotBtn) {
+        els.buySlotBtn.addEventListener('click', () => {
+            if (gameState.money >= costs.slot && gameState.slots < gameState.maxSlots) {
+                gameState.money -= costs.slot;
+                gameState.slots++;
+                costs.slot = Math.floor(costs.slot * 1.5);
+                renderSlots();
+                updateHUD();
+                showNotification("Expanded counter space!", "success");
+            }
+        });
+    }
+}
+
+function buyTraySlot() {
+    if (gameState.money >= gameState.trayPrice && gameState.maxTray < 10) {
+        gameState.money -= gameState.trayPrice;
+        gameState.maxTray++;
+        gameState.boughtTrayCount++;
+        gameState.trayPrice = 200 + (gameState.boughtTrayCount * 150);
+        showNotification(`Expanded Tray to ${gameState.maxTray}!`, 'success');
+        updateHUD();
+        renderTray();
+    }
+}
+
+function buyEquipment() {
+    const cats = Object.keys(MENU_CATEGORIES);
+    if (gameState.money >= gameState.equipmentPrice && gameState.unlockedCategoryIndex < cats.length - 1) {
+        gameState.money -= gameState.equipmentPrice;
+        gameState.unlockedCategoryIndex++;
+        
+        const newCat = cats[gameState.unlockedCategoryIndex];
+        gameState.unlockedCategories.push(newCat);
+        
+        // Unlock items in that category
+        for (const [itemKey, itemData] of Object.entries(MENU)) {
+            if (itemData.cat === newCat) {
+                gameState.unlockedItems.push(itemKey);
+            }
+        }
+        
+        gameState.boughtEquipmentCount = (gameState.boughtEquipmentCount || 0) + 1;
+        gameState.equipmentPrice = 200 + (gameState.boughtEquipmentCount * 200);
+        
+        showNotification(`Unlocked ${MENU_CATEGORIES[newCat].name}!`, 'success');
+        buildMenuUI();
+        updateAppliances();
+        updateHUD();
+    }
+}
+
+// --- Auth Logic ---
+function authAction(type) {
+    const username = els.authUsername.value;
+    const password = els.authPass.value;
+    if (!username || !password) {
+        els.authError.textContent = "Please enter both username and password.";
+        return;
+    }
+    
+    if (ws && ws.readyState === 1) {
+        ws.send(JSON.stringify({
+            action: type,
+            username: username,
+            password: password
+        }));
+    } else {
+        els.authError.textContent = "Server offline. Try again later.";
+    }
+}
+
+
+function saveGameToServer() {
+    if (ws && ws.readyState === 1 && (localStorage.getItem('isLoggedIn') || gameState.isLoggedIn)) {
+        ws.send(JSON.stringify({
+            action: 'SAVE_PROGRESS',
+            progress: gameState
+        }));
+    }
+}
