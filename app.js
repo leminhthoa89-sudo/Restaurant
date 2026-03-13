@@ -17,7 +17,7 @@ let gameState = {
     unlockedItems: ['juice_orange', 'ice_vanilla'],
     timeMinutes: 540, // 09:00 AM = 9 * 60 = 540
     endTime: 1020,    // 05:00 PM = 17 * 60 = 1020
-    isDayActive: true,
+    isDayActive: false, // V23: Pause until login
     dayStats: {
         revenue: 0,
         cogs: 0,
@@ -201,6 +201,9 @@ function initGame() {
     setTimeout(() => {
         if (!gameState.isLoggedIn) {
             openAuthModal();
+        } else {
+            // Already logged in (session restore), start day if day 1
+            if (gameState.day === 1) gameState.isDayActive = true;
         }
     }, 1000);
 
@@ -221,6 +224,13 @@ function openAuthModal() {
     if (els.authModal) {
         els.authModal.classList.remove('hidden');
         if (els.authError) els.authError.textContent = '';
+        
+        // V23: Hide close button if NOT logged in
+        let closeBtn = document.getElementById('close-auth-btn');
+        if (closeBtn) {
+            if (!gameState.isLoggedIn) closeBtn.classList.add('hidden');
+            else closeBtn.classList.remove('hidden');
+        }
     }
 }
 
@@ -241,14 +251,14 @@ function buildMenuUI() {
     els.menuBoard.innerHTML = '';
     
     for (const [catKey, catData] of Object.entries(MENU_CATEGORIES)) {
-        if (!gameState.unlockedCategories.includes(catKey)) continue;
-
-        els.menuBoard.innerHTML += `<div class="category-title" style="grid-column: 1/-1; color: white; margin-top: 10px; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; border-bottom: 1px solid rgba(255,255,255,0.1); padding-bottom: 5px;">${catData.name}</div>`;
+        // V23: Show categories even if locked
+        els.menuBoard.innerHTML += `<div class="category-title" style="grid-column: 1/-1; color: var(--text-color); margin-top: 10px; font-weight: 800; font-size: 0.85rem; text-transform: uppercase; border-bottom: 2px solid rgba(0,0,0,0.05); padding-bottom: 5px;">${catData.name}</div>`;
         
         for (const [itemKey, itemData] of Object.entries(MENU)) {
             if (itemData.cat === catKey) {
                 const isLocked = !gameState.unlockedItems.includes(itemKey);
                 const stock = gameState.inventory[itemKey] || 0;
+                const isDay1 = gameState.day === 1;
                 
                 let isJuice = catKey === 'juice';
                 let isIceCream = catKey === 'ice_cream';
@@ -263,11 +273,16 @@ function buildMenuUI() {
                 `;
                 else iconHTML = `<div class="color-icon" style="background:${itemData.color}">${itemData.icon}</div>`;
                     
+                let lockIcon = isLocked ? `<div class="item-locked-overlay"><i class="fa-solid fa-lock"></i></div>` : '';
+                let stockHTML = (isDay1 || isLocked) ? '' : `<div class="stock-indicator ${stock < 3 ? 'text-red' : ''}">${stock} left</div>`;
+
                 let btnHTML = `
-                    <button class="menu-item-btn glass-panel ${isLocked ? 'locked' : ''} ${stock <= 0 ? 'out-of-stock' : ''}" data-item="${itemKey}" id="btn-${itemKey}">
+                    <button class="menu-item-btn glass-panel ${isLocked ? 'locked' : ''} ${(!isDay1 && stock <= 0) ? 'out-of-stock' : ''}" 
+                            data-item="${itemKey}" id="btn-${itemKey}" ${isLocked ? 'disabled' : ''}>
+                        ${lockIcon}
                         ${iconHTML}
                         <div class="item-name">${itemData.name}</div>
-                        <div class="stock-indicator ${stock < 3 ? 'text-red' : ''}">${stock} left</div>
+                        ${stockHTML}
                     </button>
                 `;
                 els.menuBoard.innerHTML += btnHTML;
@@ -434,6 +449,7 @@ function gameLoop() {
     updateHUD();
     
     if (gameState.timeMinutes >= gameState.endTime) {
+        document.body.classList.add('night-mode');
         endDay();
         return;
     }
@@ -719,8 +735,15 @@ function renderTray() {
         }
     }
     
-    for(let i=0; i<gameState.maxTray; i++) {
+    const totalPossibleTraySlots = 5;
+    for(let i=0; i<totalPossibleTraySlots; i++) {
         let slot = document.createElement('div');
+        
+        if (i >= gameState.maxTray) {
+            slot.className = 'tray-slot locked';
+            els.holdingTray.appendChild(slot);
+            continue;
+        }
         
         if (i < gameState.tray.length) {
             let itemKey = gameState.tray[i];
@@ -763,15 +786,15 @@ function prepareDrink(itemKey, btnElement) {
         showFloatingText("Tray Full!", btnElement, true);
         return;
     }
-    // V22: Check Stock
-    const stock = gameState.inventory[itemKey] || 0;
-    if (stock <= 0) {
-        showOutOfStockOptions(itemKey, btnElement);
-        return;
+    // V22: Check Stock (Unlimited on Day 1)
+    if (gameState.day > 1) {
+        const stock = gameState.inventory[itemKey] || 0;
+        if (stock <= 0) {
+            showOutOfStockOptions(itemKey, btnElement);
+            return;
+        }
+        gameState.inventory[itemKey]--;
     }
-
-    // Deduct stock (cost is paid during Pre-Day buy, or Emergency)
-    gameState.inventory[itemKey]--;
     gameState.stockAge[itemKey] = 0; // Reset age if used
 
     gameState.dayStats.cogs += item.cost;
@@ -1052,6 +1075,7 @@ els.startAfterSupplyBtn.addEventListener('click', () => {
     }
     
     els.supplyModal.classList.add('hidden');
+    document.body.classList.remove('night-mode');
     startDay();
 });
 
@@ -1469,9 +1493,16 @@ function connectWS(mode) {
             els.btnLogin.click(); // Switch view if needed
         } else if (msg.type === 'LOGIN_SUCCESS') {
             localStorage.setItem('isLoggedIn', 'true');
+            gameState.isLoggedIn = true;
             gameState.playerName = msg.username;
             showNotification(`Welcome back, ${msg.username}!`, 'success');
             els.authModal.classList.add('hidden');
+            
+            // V23: Start the game if Day 1
+            if (gameState.day === 1) {
+                gameState.isDayActive = true;
+                showNotification("Ready to serve! Welcome to Day 1.", "info");
+            }
             els.authBtn.innerHTML = `<i class="fa-solid fa-user-check"></i> ${msg.username}`;
             if (msg.progress) {
                 Object.assign(gameState, msg.progress);
@@ -1664,11 +1695,19 @@ function setupEventListeners() {
     // Auth listeners
     if (els.authBtn) {
         els.authBtn.addEventListener('click', () => {
-            els.authModal.classList.remove('hidden');
-            els.authError.textContent = '';
+            gameState.isDayActive = false; // Pause when opening auth
+            openAuthModal();
         });
     }
-    if (els.closeAuthBtn) els.closeAuthBtn.addEventListener('click', () => els.authModal.classList.add('hidden'));
+    if (els.closeAuthBtn) {
+        els.closeAuthBtn.addEventListener('click', () => {
+            els.authModal.classList.add('hidden');
+            // Resume only if day should be active (logged in and day 1, or day in progress)
+            if (gameState.isLoggedIn) {
+                gameState.isDayActive = true;
+            }
+        });
+    }
     
     if (els.btnRegister) els.btnRegister.addEventListener('click', () => authAction('REGISTER'));
     if (els.btnLogin) els.btnLogin.addEventListener('click', () => authAction('LOGIN'));

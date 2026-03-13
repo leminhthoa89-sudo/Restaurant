@@ -1,23 +1,23 @@
 /* Base Variables and Reset */
 :root {
-    --primary: #f87171;    /* Vibrant Red/Pink */
-    --primary-hover: #ef4444;
-    --bg-color: #fce7f3;   /* Soft Pink */
-    --card-bg: rgba(255, 255, 255, 0.7);
-    --glass-border: rgba(255, 255, 255, 0.4);
-    --text-color: #374151; /* Dark Gray for contrast */
-    --money-color: #10b981;/* Vibrant Green */
-    --counter-color: #d4a373; /* Wood color */
+    --primary: #FFB7B2;    /* Pastel Pink */
+    --primary-hover: #FF9AA2;
+    --bg-color: #FDFCF0;   /* Creamy White */
+    --card-bg: rgba(255, 255, 255, 0.9);
+    --glass-border: rgba(255, 255, 255, 0.6);
+    --text-color: #5D5D5D; /* Soft Charcoal */
+    --money-color: #B2F2BB;/* Pastel Green */
+    --counter-color: #FFFFFF; /* Pure White Counter */
     --font-main: 'Outfit', sans-serif;
     
-    /* Levels Colors */
-    --lvl1: #fecdd3;
-    --lvl2: #bbf7d0;
-    --lvl3: #bfdbfe;
-    --lvl4: #fef08a;
-    --lvl5: #e9d5ff; /* Purple */
+    /* Levels Colors (Pastels) */
+    --lvl1: #FFB7B2; /* Pink */
+    --lvl2: #B2F2BB; /* Mint */
+    --lvl3: #B2E2F2; /* Blue */
+    --lvl4: #FFFFD1; /* Yellow */
+    --lvl5: #E2B2F2; /* Lavender */
     
-    --shadow-soft: 0 8px 32px 0 rgba(31, 38, 135, 0.1);
+    --shadow-soft: 0 4px 20px 0 rgba(0, 0, 0, 0.05);
 }
 
 * {
@@ -30,10 +30,10 @@ body {
     font-family: var(--font-main);
     background: var(--bg-color);
     background-image: 
-        radial-gradient(at 0% 0%, hsla(339, 100%, 86%, 1) 0px, transparent 50%),
-        radial-gradient(at 100% 0%, hsla(288, 100%, 86%, 1) 0px, transparent 50%),
-        radial-gradient(at 100% 100%, hsla(210, 100%, 86%, 1) 0px, transparent 50%),
-        radial-gradient(at 0% 100%, hsla(43, 100%, 86%, 1) 0px, transparent 50%);
+        radial-gradient(at 0% 0%, hsla(0, 100%, 98%, 1) 0px, transparent 50%),
+        radial-gradient(at 100% 0%, hsla(120, 100%, 98%, 1) 0px, transparent 50%),
+        radial-gradient(at 100% 100%, hsla(200, 100%, 98%, 1) 0px, transparent 50%),
+        radial-gradient(at 0% 100%, hsla(40, 100%, 98%, 1) 0px, transparent 50%);
     background-size: cover;
     background-attachment: fixed;
     color: var(--text-color);
@@ -122,17 +122,19 @@ body {
     flex-direction: row;
     flex-grow: 1;
     overflow: hidden;
-    background: #18181b;
+    background: #ffffff;
+    border-top: 1px solid rgba(0,0,0,0.05);
 }
 
 /* Sidebar for preparation */
 #counter-area {
     width: 100px; /* Thinner sidebar */
-    background: linear-gradient(to bottom, #deb887, #8b4513);
-    border-right: 2px solid #a0522d;
+    background: #ffffff; /* White counter */
+    border-right: 1px solid rgba(0,0,0,0.05);
     display: flex;
     flex-direction: column;
     padding: 5px 2px; /* Less padding */
+    box-shadow: 2px 0 10px rgba(0,0,0,0.02);
 }
 
 /* Customer Area (Top Portion) */
@@ -150,10 +152,10 @@ body {
 /* Horizontal Tray Bar */
 .counter-edge {
     height: 70px; /* Slimmer tray */
-    background: rgba(255, 255, 255, 0.2);
+    background: #ffffff;
     backdrop-filter: blur(8px);
-    border-top: 1px solid rgba(255,255,255,0.2);
-    border-bottom: 2px solid rgba(0,0,0,0.2);
+    border-top: 2px solid rgba(0,0,0,0.1);
+    border-bottom: 2px solid rgba(0,0,0,0.05);
     display: flex;
     justify-content: center;
     align-items: center;
@@ -177,6 +179,31 @@ body {
     display: flex;
     flex-direction: row; /* Horizontal tray */
     gap: 10px;
+}
+
+.tray-slot {
+    width: 50px;
+    height: 50px;
+    background: rgba(255,255,255,0.5);
+    border: 2px dashed rgba(0,0,0,0.1);
+    border-radius: 10px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
+}
+
+.tray-slot.locked {
+    background: rgba(0,0,0,0.05);
+    border: 2px solid rgba(0,0,0,0.05);
+}
+
+.tray-slot.locked::after {
+    content: '\f023'; /* Lock icon */
+    font-family: 'Font Awesome 6 Free';
+    font-weight: 900;
+    color: rgba(0,0,0,0.2);
+    font-size: 0.8rem;
 }
 
 /* Background Atmosphere (Glass doors & tables) */
@@ -536,24 +563,22 @@ body {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    color: white;
-    font-weight: bold;
-    text-shadow: 1px 1px 3px rgba(0,0,0,0.8);
+    gap: 2px;
+    color: var(--text-color);
+    font-weight: 600;
+    font-size: 0.7rem;
     position: relative;
+    width: 100%;
 }
 .appliance i {
-    font-size: 2.2rem; /* Shrunk further */
-    background: linear-gradient(135deg, #e0e0e0, #9e9e9e);
-    -webkit-background-clip: text;
-    background-clip: text;
-    -webkit-text-fill-color: transparent;
-    filter: drop-shadow(0px 2px 2px rgba(0,0,0,0.5));
+    font-size: 1.8rem; /* Shrunk slightly to fit 5 comfortably */
+    color: #cbd5e1;
+    filter: drop-shadow(0px 1px 1px rgba(0,0,0,0.1));
 }
 .appliance.locked { opacity: 0.3; filter: grayscale(100%); }
 .appliance.active i {
     animation: shake 0.5s infinite;
-    -webkit-text-fill-color: var(--primary); /* Glow red when running */
+    color: var(--primary); /* Glow red when running */
 }
 
 /* Ingredients Panel (Main Right Area) */
@@ -593,12 +618,58 @@ body {
 
 .menu-item-btn .item-icon { font-size: 1.5rem; }
 .menu-item-btn .item-name { font-size: 0.8rem; }
-.stock-indicator {
-    font-size: 0.7rem;
-    background: rgba(0,0,0,0.2);
-    padding: 2px 6px;
-    border-radius: 8px;
-    margin-top: 4px;
+/* Locked Overlay */
+.item-locked-overlay {
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(255, 255, 255, 0.7);
+    backdrop-filter: blur(2px);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 1.5rem;
+    color: rgba(0,0,0,0.4);
+    border-radius: inherit;
+    z-index: 10;
+}
+
+.menu-item-btn.locked {
+    pointer-events: none;
+    cursor: default;
+}
+
+/* Night Mode Effect */
+.night-mode #customer-area, .night-mode #player-interaction-area {
+    filter: brightness(0.5) saturate(0.6) hue-rotate(210deg);
+    transition: filter 2s ease-in-out;
+}
+.night-mode #customer-area::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 10, 50, 0.4);
+    pointer-events: none;
+    z-index: 100;
+}
+.night-mode #player-interaction-area::after {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(10, 10, 50, 0.2);
+    pointer-events: none;
+    z-index: 100;
+}
+
+/* Thought Bubbles in Pastel */
+.thought-bubble {
+    background: white;
+    padding: 5px;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    position: relative;
 }
 
 /* Supply Modal Styles */
@@ -648,7 +719,11 @@ body {
 .item-price { font-size: 0.75rem; color: #10b981; font-weight:bold; }
 .item-cost { font-size: 0.65rem; color: #ef4444; }
 
-.menu-item-btn.locked { display:none; /* Hide locked items entirely until available */ }
+/* V23: Show locked items but styled differently */
+.menu-item-btn.locked { 
+    opacity: 0.7;
+    filter: grayscale(0.5);
+}
 .menu-item-btn.preparing { opacity: 0.5; pointer-events: none; }
 
 /* Modals */
