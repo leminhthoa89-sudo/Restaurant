@@ -1105,7 +1105,9 @@ function updateRankDisplay() {
     mpEls.rankEarnings.textContent = `($${total})`;
     
     // Fetch global leaderboard
-    fetch('/api/leaderboard')
+    fetch('/api/leaderboard', {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+    })
         .then(r => r.json())
         .then(data => {
             if (!data || data.length === 0) {
@@ -1133,7 +1135,9 @@ function updateRankDisplay() {
 function submitScore() {
     let name = encodeURIComponent(gameState.playerName);
     let score = gameState.totalEarnings;
-    fetch(`/api/submit_score?name=${name}&score=${score}`).catch(() => {});
+    fetch(`/api/submit_score?name=${name}&score=${score}`, {
+        headers: { 'ngrok-skip-browser-warning': 'true' }
+    }).catch(() => {});
 }
 
 // Toggle popups
